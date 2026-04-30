@@ -216,6 +216,7 @@ function buildFromAPI(apiData) {
         dates: raw.dates, closes: raw.closes,
         yield: (100/idx.per).toFixed(2),
         ytd: raw.ytd != null ? raw.ytd : null,
+        divYield: raw.divYield != null ? raw.divYield : null,
       });
     }
   });
