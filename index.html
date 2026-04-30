@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Market Dashboard Pro</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-left">
+    <div class="logo">MDP</div>
+    <div>
+      <div class="header-title">Market Dashboard Pro</div>
+      <div class="header-sub" id="last-update">Actualizando datos...</div>
+    </div>
+  </div>
+  <nav class="nav">
+    <button class="nav-btn active" onclick="showSection('equities')">Renta Variable</button>
+    <button class="nav-btn" onclick="showSection('fixed')">Renta Fija</button>
+    <button class="nav-btn" onclick="showSection('credit')">Crédito</button>
+    <button class="nav-btn" onclick="showSection('forex')">Divisas</button>
+    <button class="nav-btn" onclick="showSection('commodities')">Materias Primas</button>
+    <button class="nav-btn" onclick="showSection('sentiment')">Fear &amp; Greed</button>
+    <button class="nav-btn" onclick="showSection('news')">Noticias</button>
+  </nav>
+  <button class="refresh-btn" onclick="refreshAll()">↻ Actualizar</button>
+</header>
+
+<!-- TICKER BAR -->
+<div class="ticker-bar">
+  <div class="ticker-inner" id="ticker-content">
+    <span class="ticker-item">Cargando datos de mercado...</span>
+  </div>
+</div>
+
+<main class="main">
+
+<!-- ==================== SECTION: EQUITIES ==================== -->
+<section id="section-equities" class="section active">
+  <div class="section-header">
+    <h2>Renta Variable Global</h2>
+    <div class="period-selector">
+      <button class="period-btn active" onclick="setEquityPeriod('1D',this)">1D</button>
+      <button class="period-btn" onclick="setEquityPeriod('1W',this)">1S</button>
+      <button class="period-btn" onclick="setEquityPeriod('1M',this)">1M</button>
+      <button class="period-btn" onclick="setEquityPeriod('3M',this)">3M</button>
+      <button class="period-btn" onclick="setEquityPeriod('YTD',this)">YTD</button>
+      <button class="period-btn" onclick="setEquityPeriod('1Y',this)">1A</button>
+    </div>
+  </div>
+
+  <!-- INDEX CARDS GRID -->
+  <div class="cards-grid" id="index-cards"></div>
+
+  <!-- SELECTED INDEX DETAIL -->
+  <div class="detail-panel" id="index-detail">
+    <div class="detail-left">
+      <div class="detail-header">
+        <h3 id="detail-name">S&P 500</h3>
+        <span class="detail-badge" id="detail-exchange">NYSE</span>
+      </div>
+      <div class="detail-metrics">
+        <div class="metric-box">
+          <span class="metric-label">Nivel</span>
+          <span class="metric-val" id="detail-price">—</span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">Var. Día</span>
+          <span class="metric-val" id="detail-change">—</span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">PER Forward</span>
+          <span class="metric-val" id="detail-per">—</span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">52W High</span>
+          <span class="metric-val" id="detail-high">—</span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">52W Low</span>
+          <span class="metric-val" id="detail-low">—</span>
+        </div>
+        <div class="metric-box">
+          <span class="metric-label">Yield Implícito</span>
+          <span class="metric-val" id="detail-yield">—</span>
+        </div>
+      </div>
+      <div class="chart-container">
+        <canvas id="index-chart"></canvas>
+      </div>
+    </div>
+    <div class="detail-right">
+      <h4>Top Holdings</h4>
+      <div id="holdings-list" class="holdings-list"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== SECTION: FIXED INCOME ==================== -->
+<section id="section-fixed" class="section">
+  <div class="section-header">
+    <h2>Renta Fija — Curvas de Tipos</h2>
+  </div>
+
+  <div class="yield-grid">
+    <!-- Yield Curves Table -->
+    <div class="yield-table-panel">
+      <h4>Tipos por Plazo (%)</h4>
+      <div class="table-wrap">
+        <table class="data-table" id="yield-table">
+          <thead>
+            <tr>
+              <th>País</th>
+              <th>1Y</th>
+              <th>2Y</th>
+              <th>5Y</th>
+              <th>10Y</th>
+              <th>30Y</th>
+              <th>Pendiente 2-10</th>
+            </tr>
+          </thead>
+          <tbody id="yield-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Slope Chart -->
+    <div class="slope-panel">
+      <h4>Pendiente 2-10 años (pb)</h4>
+      <div class="chart-container">
+        <canvas id="slope-chart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Yield Curve Shape -->
+  <div class="curve-panel">
+    <div class="curve-selector">
+      <h4>Forma de la Curva</h4>
+      <div class="country-tabs" id="curve-country-tabs"></div>
+    </div>
+    <div class="chart-container" style="height:260px">
+      <canvas id="curve-chart"></canvas>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== SECTION: CREDIT ==================== -->
+<section id="section-credit" class="section">
+  <div class="section-header">
+    <h2>Mercado de Crédito — Spreads</h2>
+  </div>
+
+  <div class="credit-top">
+    <div class="credit-cards" id="credit-cards"></div>
+  </div>
+
+  <div class="credit-charts">
+    <div class="chart-panel">
+      <h4>Evolución Spreads IG (pb)</h4>
+      <div class="chart-container">
+        <canvas id="ig-chart"></canvas>
+      </div>
+    </div>
+    <div class="chart-panel">
+      <h4>Evolución Spreads HY (pb)</h4>
+      <div class="chart-container">
+        <canvas id="hy-chart"></canvas>
+      </div>
+    </div>
+    <div class="chart-panel">
+      <h4>Diferencial HY - IG (pb)</h4>
+      <div class="chart-container">
+        <canvas id="diff-chart"></canvas>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== SECTION: FOREX ==================== -->
+<section id="section-forex" class="section">
+  <div class="section-header">
+    <h2>Mercado de Divisas</h2>
+  </div>
+
+  <div class="forex-cards" id="forex-cards"></div>
+
+  <div class="forex-charts">
+    <div class="chart-panel wide">
+      <h4>EUR/USD — Evolución</h4>
+      <div class="chart-container">
+        <canvas id="eurusd-chart"></canvas>
+      </div>
+    </div>
+    <div class="chart-panel wide">
+      <h4>USD Index (DXY) — Evolución</h4>
+      <div class="chart-container">
+        <canvas id="dxy-chart"></canvas>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== SECTION: COMMODITIES ==================== -->
+<section id="section-commodities" class="section">
+  <div class="section-header">
+    <h2>Materias Primas</h2>
+  </div>
+
+  <div class="commodities-grid">
+    <!-- Energy -->
+    <div class="commodity-group">
+      <div class="group-title">Energía</div>
+      <div id="energy-cards" class="comm-cards"></div>
+    </div>
+    <!-- Precious Metals -->
+    <div class="commodity-group">
+      <div class="group-title">Metales Preciosos</div>
+      <div id="precious-cards" class="comm-cards"></div>
+    </div>
+    <!-- Industrial Metals -->
+    <div class="commodity-group">
+      <div class="group-title">Metales Industriales</div>
+      <div id="industrial-cards" class="comm-cards"></div>
+    </div>
+  </div>
+
+  <div class="commodities-chart-row">
+    <div class="chart-panel">
+      <h4>Energía — Evolución (indexada base 100)</h4>
+      <div class="chart-container">
+        <canvas id="energy-chart"></canvas>
+      </div>
+    </div>
+    <div class="chart-panel">
+      <h4>Metales — Evolución (indexada base 100)</h4>
+      <div class="chart-container">
+        <canvas id="metals-chart"></canvas>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== SECTION: FEAR & GREED ==================== -->
+<section id="section-sentiment" class="section">
+  <div class="section-header">
+    <h2>Indicadores de Sentimiento</h2>
+  </div>
+
+  <div class="fg-grid">
+    <!-- USA Fear & Greed -->
+    <div class="fg-panel">
+      <div class="fg-title">Estados Unidos — S&P 500</div>
+      <div class="gauge-wrap">
+        <canvas id="gauge-us" width="300" height="180"></canvas>
+        <div class="gauge-value" id="fg-us-val">—</div>
+        <div class="gauge-label" id="fg-us-label">—</div>
+      </div>
+      <div class="fg-indicators" id="fg-us-indicators"></div>
+    </div>
+
+    <!-- EUROPE Fear & Greed -->
+    <div class="fg-panel">
+      <div class="fg-title">Europa — Euro Stoxx 50</div>
+      <div class="gauge-wrap">
+        <canvas id="gauge-eu" width="300" height="180"></canvas>
+        <div class="gauge-value" id="fg-eu-val">—</div>
+        <div class="gauge-label" id="fg-eu-label">—</div>
+      </div>
+      <div class="fg-indicators" id="fg-eu-indicators"></div>
+    </div>
+  </div>
+
+  <div class="fg-legend">
+    <span class="leg extreme-fear">0-20 Miedo Extremo</span>
+    <span class="leg fear">20-40 Miedo</span>
+    <span class="leg neutral">40-60 Neutral</span>
+    <span class="leg greed">60-80 Codicia</span>
+    <span class="leg extreme-greed">80-100 Codicia Extrema</span>
+  </div>
+</section>
+
+<!-- ==================== SECTION: NEWS ==================== -->
+<section id="section-news" class="section">
+  <div class="section-header">
+    <h2>Noticias de Mercado</h2>
+    <div class="news-filter">
+      <button class="filter-btn active" onclick="filterNews('all',this)">Todas</button>
+      <button class="filter-btn" onclick="filterNews('macro',this)">Macro</button>
+      <button class="filter-btn" onclick="filterNews('equities',this)">Bolsa</button>
+      <button class="filter-btn" onclick="filterNews('rates',this)">Renta Fija</button>
+      <button class="filter-btn" onclick="filterNews('credit',this)">Crédito</button>
+      <button class="filter-btn" onclick="filterNews('commodities',this)">Mat. Primas</button>
+    </div>
+  </div>
+  <div id="news-grid" class="news-grid"></div>
+</section>
+
+</main>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <span>Market Dashboard Pro · Datos con retraso 15-20 min · Fuentes: Yahoo Finance, FRED, ECB · No constituye asesoramiento de inversión</span>
+</footer>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/charts.js"></script>
+<script src="assets/js/sentiment.js"></script>
+<script src="assets/js/news.js"></script>
+<script src="assets/js/main.js"></script>
+</body>
+</html>
