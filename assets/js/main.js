@@ -3,7 +3,7 @@
    ============================================================ */
 
 let selectedIndex = 'sp500';
-let equityPeriod = '1M';
+let equityPeriod = '1W';
 let selectedCurveCountry = 'US';
 let refreshTimer = null;
 
@@ -32,6 +32,9 @@ function showSection(name) {
     case 'commodities':
       renderCommodityCards();
       renderCommodityCharts();
+      break;
+    case 'correlations':
+      renderCorrelations();
       break;
     case 'sentiment':
       renderSentiment();
@@ -98,8 +101,9 @@ function renderIndexCards() {
     const chg = idx.change || 0;
     const cls = chg >= 0 ? 'pos' : 'neg';
     const sign = chg >= 0 ? '▲' : '▼';
+    const ytd = idx.ytd != null ? idx.ytd : null;
+    const ytdCls = ytd != null ? (ytd >= 0 ? 'pos' : 'neg') : 'neutral';
 
-    // 52-week range bar
     let barWidth = 50;
     if (idx.high52 && idx.low52) {
       const range = idx.high52 - idx.low52;
@@ -110,7 +114,8 @@ function renderIndexCards() {
       <div class="ic-ticker">${idx.ticker} · ${idx.region}</div>
       <div class="ic-name">${idx.name}</div>
       <div class="ic-price">${fmt(idx.price)}</div>
-      <div class="ic-change ${cls}">${sign} ${Math.abs(chg).toFixed(2)}%</div>
+      <div class="ic-change ${cls}">${sign} ${Math.abs(chg).toFixed(2)}% hoy</div>
+      ${ytd != null ? `<div class="ic-ytd ${ytdCls}">YTD: ${ytd >= 0 ? '+' : ''}${ytd.toFixed(2)}%</div>` : ''}
       <div class="ic-per">PER Fw: ${idx.per}x · Yield: ${idx.yield}%</div>
       <div class="ic-bar"><div class="ic-bar-fill ${cls}" style="width:${barWidth.toFixed(0)}%; background: ${chg >= 0 ? 'var(--green)' : 'var(--red)'}"></div></div>
     </div>`;
@@ -122,8 +127,12 @@ async function selectIndex(id) {
   selectedIndex = id;
 
   // Update card selection
-  document.querySelectorAll('.index-card').forEach(c => c.classList.remove('selected'));
-  event?.currentTarget?.classList.add('selected');
+  document.querySelectorAll('.index-card').forEach(c => {
+    c.classList.remove('selected');
+    if (c.getAttribute('onclick') && c.getAttribute('onclick').includes("'" + id + "'")) {
+      c.classList.add('selected');
+    }
+  });
 
   const idx = window.marketData.indices[id];
   if (!idx) return;
