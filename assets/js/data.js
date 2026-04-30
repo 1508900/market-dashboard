@@ -17,6 +17,12 @@ const INDICES = [
   { id: 'korea',     ticker: 'EWY',       name: 'MSCI Korea',       exchange: 'NYSE',   region: 'Korea',  per: 10.4, currency: 'USD' },
 ];
 
+const VOLATILITY_INDICES = [
+  { id: 'vix',    ticker: '^VIX',    name: 'VIX',    desc: 'Volatilidad implícita S&P 500 (30d)',   market: 'EEUU' },
+  { id: 'vstoxx', ticker: '^VSTOXX', name: 'VSTOXX', desc: 'Volatilidad implícita Euro Stoxx 50',   market: 'Europa' },
+  { id: 'move',   ticker: 'MOVE',    name: 'MOVE',   desc: 'Volatilidad implícita bonos EEUU',      market: 'Bonos' },
+];
+
 const FOREX_PAIRS = [
   { id: 'eurusd', ticker: 'EURUSD=X', name: 'EUR/USD',   base: 'EUR', quote: 'USD' },
   { id: 'dxy',    ticker: 'DX-Y.NYB', name: 'USD Index', base: 'USD', quote: 'Index' },
@@ -230,6 +236,7 @@ function buildFromAPI(apiData) {
         dates: raw.dates, closes: raw.closes,
         change: +(raw.change||0).toFixed(3),
         changePt: +(raw.price - raw.prevClose).toFixed(4),
+        ytd: raw.ytd != null ? raw.ytd : null,
       });
     }
   });
@@ -244,6 +251,7 @@ function buildFromAPI(apiData) {
           dates: raw.dates, closes: raw.closes,
           change: +(raw.change||0).toFixed(2),
           changePt: +(raw.price - raw.prevClose).toFixed(2),
+          ytd: raw.ytd != null ? raw.ytd : null,
         });
       }
       // fallback
@@ -300,7 +308,8 @@ function updateHoldingsWithLiveData(holdingsData) {
       var live = holdingsData[h.ticker];
       return Object.assign({}, h, {
         change: live ? +(live.change||0).toFixed(2) : +((Math.random()-0.45)*2).toFixed(2),
-        price: live ? live.price : null,
+        price:  live ? live.price : null,
+        ytd:    live && live.ytd != null ? live.ytd : null,
       });
     });
   });
@@ -349,11 +358,61 @@ async function loadAllData() {
     });
   });
 
+  // Build volatility data
+  window.marketData.volatility = buildVolatilityData(apiData);
+
   window.marketData.lastUpdate = new Date();
   var timeStr = window.marketData.lastUpdate.toLocaleTimeString('es-ES', {hour:'2-digit',minute:'2-digit'});
   document.getElementById('last-update').textContent = 'Actualizado: ' + timeStr + (isLive ? ' · Datos reales' : ' · Datos simulados');
 
   return window.marketData;
+}
+
+function buildVolatilityData(apiData) {
+  var result = {};
+  // VIX levels for reference zones
+  var refs = {
+    vix:    { low: 12, normal: 20, elevated: 30, extreme: 40 },
+    vstoxx: { low: 15, normal: 22, elevated: 35, extreme: 50 },
+    move:   { low: 80, normal: 120, elevated: 160, extreme: 200 },
+  };
+
+  VOLATILITY_INDICES.forEach(function(vi) {
+    var raw = apiData ? apiData[vi.ticker] : null;
+    var base = { vix: 17.2, vstoxx: 19.4, move: 95 }[vi.id] || 20;
+    var price = raw ? raw.price : base;
+    var prev  = raw ? raw.prevClose : base * 0.98;
+    var chg   = prev ? (price - prev) / prev * 100 : 0;
+    var dates = raw ? raw.dates : [];
+    var closes = raw ? raw.closes : [];
+
+    // If no real data, simulate
+    if (!dates.length) {
+      var sim = generateSeries(base, vi.ticker || 'VIX', 90);
+      dates = sim.dates; closes = sim.closes;
+      price = base; prev = base * 0.98; chg = 0;
+    }
+
+    var ref = refs[vi.id];
+    var zone = 'normal';
+    if (price <= ref.low) zone = 'low';
+    else if (price <= ref.normal) zone = 'normal';
+    else if (price <= ref.elevated) zone = 'elevated';
+    else if (price <= ref.extreme) zone = 'extreme';
+    else zone = 'crisis';
+
+    result[vi.id] = {
+      id: vi.id, ticker: vi.ticker, name: vi.name,
+      desc: vi.desc, market: vi.market,
+      price: +price.toFixed(2),
+      prevClose: +prev.toFixed(2),
+      change: +chg.toFixed(2),
+      ytd: raw ? raw.ytd : null,
+      dates: dates, closes: closes,
+      zone: zone, refs: ref,
+    };
+  });
+  return result;
 }
 
 // ---- UTILS ----
