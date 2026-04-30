@@ -27,6 +27,7 @@
     <button class="nav-btn" onclick="showSection('forex')">Divisas</button>
     <button class="nav-btn" onclick="showSection('commodities')">Materias Primas</button>
     <button class="nav-btn" onclick="showSection('correlations')">Correlaciones</button>
+    <button class="nav-btn" onclick="showSection('volatility')">Volatilidad</button>
     <button class="nav-btn" onclick="showSection('sentiment')">Fear &amp; Greed</button>
     <button class="nav-btn" onclick="showSection('news')">Noticias</button>
   </nav>
@@ -71,7 +72,7 @@
           <span class="metric-val" id="detail-price">—</span>
         </div>
         <div class="metric-box">
-          <span class="metric-label">Div. Yield</span>
+          <span class="metric-label">Var. YTD 2026</span>
           <span class="metric-val" id="detail-change">—</span>
         </div>
         <div class="metric-box">
@@ -87,7 +88,7 @@
           <span class="metric-val" id="detail-low">—</span>
         </div>
         <div class="metric-box">
-          <span class="metric-label">Yield Implícito</span>
+          <span class="metric-label">Yield Benef.</span>
           <span class="metric-val" id="detail-yield">—</span>
         </div>
       </div>
@@ -286,6 +287,28 @@
   </div>
 </section>
 
+<!-- ==================== SECTION: VOLATILITY ==================== -->
+<section id="section-volatility" class="section">
+  <div class="section-header">
+    <h2>Indicadores de Volatilidad</h2>
+  </div>
+  <div id="vol-cards" class="vol-cards"></div>
+  <div class="vol-charts-row">
+    <div class="chart-panel" style="flex:2">
+      <h4 id="vol-chart-title">Selecciona un indicador</h4>
+      <div class="chart-container" style="height:260px">
+        <canvas id="vol-main-chart"></canvas>
+      </div>
+    </div>
+    <div class="chart-panel" style="flex:1">
+      <h4>VIX vs VSTOXX — Comparativa</h4>
+      <div class="chart-container" style="height:260px">
+        <canvas id="vol-comparison-chart"></canvas>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ==================== SECTION: CORRELATIONS ==================== -->
 <section id="section-correlations" class="section">
   <div class="section-header">
@@ -335,6 +358,7 @@
 <script src="assets/js/data.js"></script>
 <script src="assets/js/charts.js"></script>
 <script src="assets/js/sentiment.js"></script>
+<script src="assets/js/volatility.js"></script>
 <script src="assets/js/correlations.js"></script>
 <script src="assets/js/news.js"></script>
 <script src="assets/js/main.js"></script>
