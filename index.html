@@ -293,17 +293,29 @@
     <h2>Indicadores de Volatilidad</h2>
   </div>
   <div id="vol-cards" class="vol-cards"></div>
-  <div class="vol-charts-row">
-    <div class="chart-panel" style="flex:2">
-      <h4 id="vol-chart-title">Selecciona un indicador</h4>
-      <div class="chart-container" style="height:260px">
-        <canvas id="vol-main-chart"></canvas>
+  <div class="vol-charts-grid">
+    <div class="chart-panel">
+      <h4>VIX — Evolución</h4>
+      <div class="chart-container" style="height:220px">
+        <canvas id="vol-vix-chart"></canvas>
       </div>
     </div>
-    <div class="chart-panel" style="flex:1">
-      <h4>VIX vs VSTOXX — Comparativa</h4>
-      <div class="chart-container" style="height:260px">
-        <canvas id="vol-comparison-chart"></canvas>
+    <div class="chart-panel">
+      <h4>VSTOXX — Evolución</h4>
+      <div class="chart-container" style="height:220px">
+        <canvas id="vol-vstoxx-chart"></canvas>
+      </div>
+    </div>
+    <div class="chart-panel">
+      <h4>Diferencial VIX - VSTOXX</h4>
+      <div class="chart-container" style="height:220px">
+        <canvas id="vol-diff-chart"></canvas>
+      </div>
+    </div>
+    <div class="chart-panel">
+      <h4>MOVE — Volatilidad Bonos EEUU</h4>
+      <div class="chart-container" style="height:220px">
+        <canvas id="vol-move-chart"></canvas>
       </div>
     </div>
   </div>
