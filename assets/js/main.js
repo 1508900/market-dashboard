@@ -37,7 +37,11 @@ function showSection(name) {
       setTimeout(function(){ renderCorrelations(); }, 100);
       break;
     case 'volatility':
-      renderVolatility();
+      if (window.marketData && window.marketData.volatility) {
+        renderVolatility();
+      } else {
+        setTimeout(function(){ renderVolatility(); }, 500);
+      }
       break;
     case 'sentiment':
       renderSentiment();
@@ -327,9 +331,10 @@ async function init() {
   // Load news in background
   loadNews();
 
-  // Pre-render correlations data
+  // Pre-render correlations and volatility data
   setTimeout(function(){ 
-    if (typeof renderCorrelations === 'function') renderCorrelations(); 
+    if (typeof renderCorrelations === 'function') renderCorrelations();
+    if (typeof renderVolatility === 'function') renderVolatility();
   }, 2000);
 
   // Auto-refresh every 5 minutes
