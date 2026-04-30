@@ -51,6 +51,7 @@ function setEquityPeriod(period, btn) {
   window.marketData.equityPeriod = period;
   document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
+  renderIndexCards();
   renderIndexChart(selectedIndex, period);
 }
 
@@ -92,17 +93,32 @@ function updateTickerBar() {
 }
 
 // ---- INDEX CARDS ----
+function getPeriodPerf(idx, period) {
+  if (!idx.dates || !idx.closes || idx.closes.length < 2) return null;
+  const filtered = filterByPeriod(idx.dates, idx.closes, period);
+  if (!filtered.closes || filtered.closes.length < 2) return null;
+  const first = filtered.closes[0];
+  const last = filtered.closes[filtered.closes.length - 1];
+  if (!first || !last) return null;
+  return +((last - first) / first * 100).toFixed(2);
+}
+
 function renderIndexCards() {
   const container = document.getElementById('index-cards');
   const indices = window.marketData.indices;
 
   container.innerHTML = Object.values(indices).map(idx => {
     if (!idx.price) return '';
-    const chg = idx.change || 0;
-    const cls = chg >= 0 ? 'pos' : 'neg';
-    const sign = chg >= 0 ? '▲' : '▼';
-    const ytd = idx.ytd != null ? idx.ytd : null;
-    const ytdCls = ytd != null ? (ytd >= 0 ? 'pos' : 'neg') : 'neutral';
+
+    // Period performance
+    const periodPerf = getPeriodPerf(idx, equityPeriod);
+    const perfCls = periodPerf != null ? (periodPerf >= 0 ? 'pos' : 'neg') : 'neutral';
+    const perfSign = periodPerf != null ? (periodPerf >= 0 ? '▲' : '▼') : '';
+    const perfLabel = periodPerf != null ? `${perfSign} ${Math.abs(periodPerf).toFixed(2)}% (${equityPeriod})` : `${equityPeriod}: —`;
+
+    // Dividend yield
+    const dy = idx.divYield;
+    const dyLabel = dy != null ? `Div. Yield: ${dy.toFixed(2)}%` : `Div. Yield: —`;
 
     let barWidth = 50;
     if (idx.high52 && idx.low52) {
@@ -110,13 +126,13 @@ function renderIndexCards() {
       barWidth = range > 0 ? Math.min(100, Math.max(0, (idx.price - idx.low52) / range * 100)) : 50;
     }
 
-    return `<div class="index-card ${cls} ${idx.id === selectedIndex ? 'selected' : ''}" onclick="selectIndex('${idx.id}')">
+    return `<div class="index-card ${perfCls} ${idx.id === selectedIndex ? 'selected' : ''}" onclick="selectIndex('${idx.id}')">
       <div class="ic-ticker">${idx.ticker} · ${idx.region}</div>
       <div class="ic-name">${idx.name}</div>
       <div class="ic-price">${fmt(idx.price)}</div>
-      ${ytd != null ? `<div class="ic-ytd ${ytdCls}">YTD: ${ytd >= 0 ? '+' : ''}${ytd.toFixed(2)}%</div>` : '<div class="ic-ytd neutral">YTD: cargando...</div>'}
-      <div class="ic-per">PER Fw: ${idx.per}x · Yield: ${idx.yield}%</div>
-      <div class="ic-bar"><div class="ic-bar-fill ${cls}" style="width:${barWidth.toFixed(0)}%; background: ${chg >= 0 ? 'var(--green)' : 'var(--red)'}"></div></div>
+      <div class="ic-change ${perfCls}">${perfLabel}</div>
+      <div class="ic-per">${dyLabel} · PER Fw: ${idx.per}x</div>
+      <div class="ic-bar"><div class="ic-bar-fill" style="width:${barWidth.toFixed(0)}%; background: ${(periodPerf||0) >= 0 ? 'var(--green)' : 'var(--red)'}"></div></div>
     </div>`;
   }).join('');
 }
