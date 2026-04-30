@@ -111,7 +111,6 @@ function renderVolCharts() {
 
   var vix    = volData['vix'];
   var vstoxx = volData['vstoxx'];
-  var move   = volData['move'];
 
   // 1. VIX chart
   if (vix && vix.dates.length) {
@@ -164,19 +163,5 @@ function renderVolCharts() {
     );
   }
 
-  // 4. MOVE chart
-  if (move && move.dates.length) {
-    var refNm = new Array(move.dates.length).fill(move.refs.normal);
-    var refEm = new Array(move.dates.length).fill(move.refs.elevated);
-    makeVolChart('vol-move-chart',
-      move.dates.map(function(d){ return d.slice(5); }),
-      [
-        { label: 'MOVE', data: move.closes, borderColor: '#72C971', backgroundColor: '#72C97118', borderWidth: 2, fill: true, tension: 0.3, pointRadius: 0 },
-        { label: 'Normal (' + move.refs.normal + ')', data: refNm, borderColor: '#72C97155', borderWidth: 1, borderDash: [4,4], pointRadius: 0, fill: false },
-        { label: 'Elevado (' + move.refs.elevated + ')', data: refEm, borderColor: '#E67E2255', borderWidth: 1, borderDash: [4,4], pointRadius: 0, fill: false },
-      ]
-    );
-    volCharts['vol-move-chart'].options.plugins.legend = { display: true, labels: { color: '#2A5A72', font: { size: 10 } } };
-    volCharts['vol-move-chart'].update();
-  }
+
 }
