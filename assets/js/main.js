@@ -114,8 +114,7 @@ function renderIndexCards() {
       <div class="ic-ticker">${idx.ticker} · ${idx.region}</div>
       <div class="ic-name">${idx.name}</div>
       <div class="ic-price">${fmt(idx.price)}</div>
-      <div class="ic-change ${cls}">${sign} ${Math.abs(chg).toFixed(2)}% hoy</div>
-      ${ytd != null ? `<div class="ic-ytd ${ytdCls}">YTD: ${ytd >= 0 ? '+' : ''}${ytd.toFixed(2)}%</div>` : ''}
+      ${ytd != null ? `<div class="ic-ytd ${ytdCls}">YTD: ${ytd >= 0 ? '+' : ''}${ytd.toFixed(2)}%</div>` : '<div class="ic-ytd neutral">YTD: cargando...</div>'}
       <div class="ic-per">PER Fw: ${idx.per}x · Yield: ${idx.yield}%</div>
       <div class="ic-bar"><div class="ic-bar-fill ${cls}" style="width:${barWidth.toFixed(0)}%; background: ${chg >= 0 ? 'var(--green)' : 'var(--red)'}"></div></div>
     </div>`;
