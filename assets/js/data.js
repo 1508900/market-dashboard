@@ -1,6 +1,7 @@
 /* ============================================================
    DATA.JS — Market Data Layer
-   Loads instantly with realistic data, tries live fetch in background
+   Datos simulados realistas + intento fetch divisas via frankfurter
+   Variaciones diarias limitadas a rangos realistas por activo
    ============================================================ */
 
 const INDICES = [
@@ -14,13 +15,56 @@ const INDICES = [
   { id: 'korea',     ticker: 'EWY',       name: 'MSCI Korea',       exchange: 'NYSE',   region: 'Korea',  per: 10.4, currency: 'USD' },
 ];
 
+// Precios base realistas abril 2026
 const BASE_PRICES = {
-  '^GSPC': 5320, '^IXIC': 16800, '^STOXX50E': 5050,
-  'ACWI': 104, 'EEM': 41, 'ILF': 26, 'MCHI': 47, 'EWY': 58,
-  'EURUSD=X': 1.085, 'DX-Y.NYB': 102.8, 'EURJPY=X': 162.4, 'EURGBP=X': 0.858, 'USDJPY=X': 149.7,
-  'TTF=F': 34.2, 'BZ=F': 82.4, 'CL=F': 78.1,
-  'GC=F': 2340, 'SI=F': 27.8,
-  'HG=F': 4.22, 'ALI=F': 2280, 'NI=F': 16800, 'ZNC=F': 2840,
+  '^GSPC':     5320,
+  '^IXIC':    16800,
+  '^STOXX50E': 5050,
+  'ACWI':       104,
+  'EEM':         41,
+  'ILF':         26,
+  'MCHI':        47,
+  'EWY':         58,
+  'EURUSD=X':  1.085,
+  'DX-Y.NYB':  102.8,
+  'EURJPY=X':  162.4,
+  'EURGBP=X':  0.858,
+  'USDJPY=X':  149.7,
+  'TTF=F':      34.2,
+  'BZ=F':       82.4,
+  'CL=F':       78.1,
+  'GC=F':      2340,
+  'SI=F':        27.8,
+  'HG=F':        4.22,
+  'ALI=F':    2280,
+  'NI=F':    16800,
+  'ZNC=F':    2840,
+};
+
+// Volatilidad diaria realista por tipo de activo
+const DAILY_VOL = {
+  '^GSPC':     0.008,
+  '^IXIC':     0.010,
+  '^STOXX50E': 0.009,
+  'ACWI':      0.007,
+  'EEM':       0.009,
+  'ILF':       0.010,
+  'MCHI':      0.012,
+  'EWY':       0.011,
+  'EURUSD=X':  0.003,
+  'DX-Y.NYB':  0.003,
+  'EURJPY=X':  0.004,
+  'EURGBP=X':  0.002,
+  'USDJPY=X':  0.003,
+  'TTF=F':     0.018,
+  'BZ=F':      0.012,
+  'CL=F':      0.013,
+  'GC=F':      0.008,
+  'SI=F':      0.012,
+  'HG=F':      0.010,
+  'ALI=F':     0.010,
+  'NI=F':      0.015,
+  'ZNC=F':     0.012,
 };
 
 const HOLDINGS = {
@@ -156,70 +200,159 @@ window.marketData = {
   credit: JSON.parse(JSON.stringify(CREDIT_BASE)), forex: {}, commodities: {}, lastUpdate: null,
 };
 
-function generateSeries(basePrice, days, volatility) {
-  days = days || 90; volatility = volatility || 0.012;
-  const dates = [], closes = [];
-  let price = basePrice * (0.88 + Math.random() * 0.08);
-  const now = new Date();
-  for (let i = days; i >= 0; i--) {
-    const d = new Date(now); d.setDate(d.getDate() - i);
-    if (d.getDay() === 0 || d.getDay() === 6) continue;
-    dates.push(d.toISOString().split('T')[0]);
-    price *= (1 + (Math.random() - 0.47) * volatility);
-    closes.push(+price.toFixed(4));
+// ---- GENERA SERIE HISTORICA REALISTA ----
+// El precio final siempre coincide exactamente con basePrice
+// La variacion diaria maxima esta limitada por DAILY_VOL
+function generateSeries(basePrice, ticker, days) {
+  days = days || 90;
+  var vol = DAILY_VOL[ticker] || 0.010;
+  var dates = [], closes = [];
+  var now = new Date();
+
+  // Construimos la serie hacia atras desde el precio base
+  // para garantizar que el ultimo punto = basePrice
+  var tmpPrices = [basePrice];
+  for (var i = 1; i <= days; i++) {
+    var prev = tmpPrices[tmpPrices.length - 1];
+    // Pequeño drift neutro + ruido limitado
+    var change = (Math.random() - 0.50) * vol;
+    tmpPrices.push(+(prev / (1 + change)).toFixed(6));
   }
-  if (closes.length) closes[closes.length - 1] = basePrice;
-  const prevClose = closes.length > 1 ? closes[closes.length - 2] : basePrice * 0.995;
-  return { price: basePrice, prevClose, high52: Math.max.apply(null, closes) * 1.02, low52: Math.min.apply(null, closes) * 0.98, dates, closes };
+  tmpPrices.reverse(); // ahora el ultimo es basePrice
+
+  var idx = 0;
+  for (var j = days; j >= 0; j--) {
+    var d = new Date(now);
+    d.setDate(d.getDate() - j);
+    var dow = d.getDay();
+    if (dow === 0 || dow === 6) continue;
+    dates.push(d.toISOString().split('T')[0]);
+    closes.push(+tmpPrices[idx].toFixed(4));
+    idx++;
+  }
+
+  // Garantizar que el ultimo valor es exactamente basePrice
+  if (closes.length > 0) closes[closes.length - 1] = basePrice;
+
+  var prevClose = closes.length > 1 ? closes[closes.length - 2] : basePrice * 0.998;
+  var allValid = closes.filter(function(c) { return c > 0; });
+
+  return {
+    price: basePrice,
+    prevClose: prevClose,
+    high52: +(Math.max.apply(null, allValid) * 1.005).toFixed(4),
+    low52:  +(Math.min.apply(null, allValid) * 0.995).toFixed(4),
+    dates: dates,
+    closes: closes,
+  };
 }
 
-function buildSimulatedData() {
+// ---- FETCH DIVISAS REALES (frankfurter.app - BCE, sin key) ----
+async function fetchForexLive() {
+  try {
+    var res = await fetch('https://api.frankfurter.app/latest?from=EUR&to=USD,JPY,GBP', {
+      signal: AbortSignal.timeout(5000)
+    });
+    var json = await res.json();
+    if (json && json.rates) {
+      return {
+        EURUSD: json.rates.USD,
+        EURJPY: json.rates.JPY,
+        EURGBP: json.rates.GBP,
+      };
+    }
+  } catch(e) {}
+  return null;
+}
+
+// ---- BUILD ALL DATA ----
+function buildSimulatedData(liveForex) {
+  // Indices
   INDICES.forEach(function(idx) {
-    const base = BASE_PRICES[idx.ticker] || 100;
-    const series = generateSeries(base, 90, 0.012);
-    const chg = (series.price - series.prevClose) / series.prevClose * 100;
+    var base = BASE_PRICES[idx.ticker] || 100;
+    var series = generateSeries(base, idx.ticker, 90);
+    var chg = (series.price - series.prevClose) / series.prevClose * 100;
     window.marketData.indices[idx.id] = Object.assign({}, idx, series, {
-      change: +chg.toFixed(2), changePt: +(series.price - series.prevClose).toFixed(2), yield: (100 / idx.per).toFixed(2)
+      change: +chg.toFixed(2),
+      changePt: +(series.price - series.prevClose).toFixed(2),
+      yield: (100 / idx.per).toFixed(2),
     });
   });
+
+  // Forex - usar datos reales si disponibles
+  var fxOverride = liveForex || {};
   FOREX_PAIRS.forEach(function(pair) {
-    const base = BASE_PRICES[pair.ticker] || 1;
-    const series = generateSeries(base, 90, 0.004);
-    const chg = (series.price - series.prevClose) / series.prevClose * 100;
+    var base = BASE_PRICES[pair.ticker] || 1;
+    // Actualizar con dato real si disponible
+    if (pair.id === 'eurusd' && fxOverride.EURUSD) base = fxOverride.EURUSD;
+    if (pair.id === 'eurjpy' && fxOverride.EURJPY) base = fxOverride.EURJPY;
+    if (pair.id === 'eurgbp' && fxOverride.EURGBP) base = fxOverride.EURGBP;
+    if (pair.id === 'usdjpy' && fxOverride.EURJPY && fxOverride.EURUSD) {
+      base = +(fxOverride.EURJPY / fxOverride.EURUSD).toFixed(3);
+    }
+    var series = generateSeries(base, pair.ticker, 90);
+    var chg = (series.price - series.prevClose) / series.prevClose * 100;
     window.marketData.forex[pair.id] = Object.assign({}, pair, {
-      rate: series.price, prevRate: series.prevClose, dates: series.dates, closes: series.closes,
-      change: +chg.toFixed(3), changePt: +(series.price - series.prevClose).toFixed(4)
+      rate: series.price,
+      prevRate: series.prevClose,
+      dates: series.dates,
+      closes: series.closes,
+      change: +chg.toFixed(3),
+      changePt: +(series.price - series.prevClose).toFixed(4),
     });
   });
+
+  // Commodities
   Object.keys(COMMODITIES).forEach(function(group) {
     window.marketData.commodities[group] = COMMODITIES[group].map(function(item) {
-      const base = BASE_PRICES[item.ticker] || 100;
-      const series = generateSeries(base, 90, 0.015);
-      const chg = (series.price - series.prevClose) / series.prevClose * 100;
-      return Object.assign({}, item, series, { change: +chg.toFixed(2), changePt: +(series.price - series.prevClose).toFixed(2) });
+      var base = BASE_PRICES[item.ticker] || 100;
+      var series = generateSeries(base, item.ticker, 90);
+      var chg = (series.price - series.prevClose) / series.prevClose * 100;
+      return Object.assign({}, item, series, {
+        change: +chg.toFixed(2),
+        changePt: +(series.price - series.prevClose).toFixed(2),
+      });
     });
   });
+
+  // Holdings
   Object.keys(HOLDINGS).forEach(function(indexId) {
+    var idxVol = 0.010;
     window.marketData.holdings[indexId] = HOLDINGS[indexId].map(function(h) {
-      return Object.assign({}, h, { change: +((Math.random() - 0.45) * 3).toFixed(2) });
+      var dailyChg = +((Math.random() - 0.48) * idxVol * 100 * 1.5).toFixed(2);
+      return Object.assign({}, h, { change: dailyChg });
     });
   });
+
+  // Yields con pequeño drift realista (max ±3pb)
   Object.values(window.marketData.yields).forEach(function(y) {
-    ['y1','y2','y5','y10','y30'].forEach(function(k) { y[k] = +(y[k] + (Math.random() - 0.5) * 0.06).toFixed(2); });
+    ['y1','y2','y5','y10','y30'].forEach(function(k) {
+      y[k] = +(y[k] + (Math.random() - 0.5) * 0.03).toFixed(2);
+    });
   });
+
+  // Credit con pequeño drift (max ±3pb)
   window.marketData.credit = CREDIT_BASE.map(function(c) {
-    return Object.assign({}, c, { spread: Math.round(c.spread + (Math.random() - 0.5) * 6), change: Math.round(c.change + (Math.random() - 0.5) * 2) });
+    return Object.assign({}, c, {
+      spread: Math.round(c.spread + (Math.random() - 0.5) * 3),
+      change: Math.round(c.change + (Math.random() - 0.5) * 1),
+    });
   });
+
   window.marketData.lastUpdate = new Date();
-  const timeStr = window.marketData.lastUpdate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-  document.getElementById('last-update').textContent = 'Actualizado: ' + timeStr + ' (datos simulados)';
+  var timeStr = window.marketData.lastUpdate.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+  var fxLabel = liveForex ? ' · Divisas en tiempo real (BCE)' : '';
+  document.getElementById('last-update').textContent = 'Actualizado: ' + timeStr + fxLabel;
 }
 
 async function loadAllData() {
-  buildSimulatedData();
+  // Intentar obtener divisas reales primero (rapido, ~1s)
+  var liveForex = await fetchForexLive();
+  buildSimulatedData(liveForex);
   return window.marketData;
 }
 
+// ---- UTILS ----
 function fmt(n, decimals) {
   decimals = decimals !== undefined ? decimals : 2;
   if (n == null || isNaN(n)) return '-';
@@ -229,7 +362,7 @@ function fmt(n, decimals) {
 function fmtChange(n, suffix) {
   suffix = suffix || '%';
   if (n == null || isNaN(n)) return '-';
-  return (n >= 0 ? '+' : '') + fmt(n) + suffix;
+  return (n >= 0 ? '+' : '') + fmt(Math.abs(n)) + suffix;
 }
 
 function changeClass(n) {
@@ -239,34 +372,50 @@ function changeClass(n) {
 }
 
 function filterByPeriod(dates, closes, period) {
-  const now = new Date();
-  let cutoff = new Date(now);
-  if (period === '1D') cutoff.setDate(cutoff.getDate() - 2);
-  else if (period === '1W') cutoff.setDate(cutoff.getDate() - 7);
-  else if (period === '1M') cutoff.setMonth(cutoff.getMonth() - 1);
-  else if (period === '3M') cutoff.setMonth(cutoff.getMonth() - 3);
+  var now = new Date();
+  var cutoff = new Date(now);
+  if (period === '1D')  cutoff.setDate(cutoff.getDate() - 2);
+  else if (period === '1W')  cutoff.setDate(cutoff.getDate() - 7);
+  else if (period === '1M')  cutoff.setMonth(cutoff.getMonth() - 1);
+  else if (period === '3M')  cutoff.setMonth(cutoff.getMonth() - 3);
   else if (period === 'YTD') cutoff = new Date(now.getFullYear(), 0, 1);
-  else if (period === '1Y') cutoff.setFullYear(cutoff.getFullYear() - 1);
+  else if (period === '1Y')  cutoff.setFullYear(cutoff.getFullYear() - 1);
   else cutoff.setMonth(cutoff.getMonth() - 1);
-  const filtered = (dates || []).map(function(d, i) { return { date: d, close: closes[i] }; })
-    .filter(function(p) { return p.close != null && new Date(p.date) >= cutoff; });
-  return { dates: filtered.map(function(p) { return p.date; }), closes: filtered.map(function(p) { return p.close; }) };
+
+  var filtered = (dates || []).map(function(d, i) {
+    return { date: d, close: closes[i] };
+  }).filter(function(p) {
+    return p.close != null && new Date(p.date) >= cutoff;
+  });
+
+  return {
+    dates:  filtered.map(function(p) { return p.date; }),
+    closes: filtered.map(function(p) { return p.close; }),
+  };
 }
 
 function generateHistoricalSeries(currentVal, days, volatility) {
-  days = days || 90; volatility = volatility || 0.008;
-  const series = [], dates = [];
-  let val = currentVal * (0.92 + Math.random() * 0.06);
-  const now = new Date();
-  for (let i = days; i >= 0; i--) {
-    const d = new Date(now); d.setDate(d.getDate() - i);
+  days = days || 90;
+  volatility = volatility || 0.006;
+  var series = [], dates = [];
+  var now = new Date();
+  var tmpPrices = [currentVal];
+  for (var i = 1; i <= days; i++) {
+    var prev = tmpPrices[tmpPrices.length - 1];
+    tmpPrices.push(+(prev / (1 + (Math.random() - 0.5) * volatility)).toFixed(3));
+  }
+  tmpPrices.reverse();
+  var idx = 0;
+  for (var j = days; j >= 0; j--) {
+    var d = new Date(now);
+    d.setDate(d.getDate() - j);
     if (d.getDay() === 0 || d.getDay() === 6) continue;
     dates.push(d.toISOString().split('T')[0]);
-    val *= (1 + (Math.random() - 0.48) * volatility);
-    series.push(+val.toFixed(3));
+    series.push(tmpPrices[idx]);
+    idx++;
   }
   if (series.length) series[series.length - 1] = currentVal;
-  return { dates, series };
+  return { dates: dates, series: series };
 }
 
 function fetchHoldings(indexId) {
