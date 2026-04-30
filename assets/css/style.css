@@ -545,3 +545,8 @@ body {
 
 /* ---- MINI SPARKLINE ---- */
 .sparkline { width: 100%; height: 40px; }
+
+.fg-ind { flex-direction: column; align-items: flex-start; gap: 6px; }
+.fg-ind-top { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 10px; width: 100%; }
+.fg-ind-desc { font-size: 11px; color: var(--text3); line-height: 1.5; padding: 0 2px; }
+
