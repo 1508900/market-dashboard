@@ -36,6 +36,9 @@ function showSection(name) {
     case 'correlations':
       setTimeout(function(){ renderCorrelations(); }, 100);
       break;
+    case 'volatility':
+      renderVolatility();
+      break;
     case 'sentiment':
       renderSentiment();
       break;
@@ -116,10 +119,6 @@ function renderIndexCards() {
     const perfSign = periodPerf != null ? (periodPerf >= 0 ? '▲' : '▼') : '';
     const perfLabel = periodPerf != null ? `${perfSign} ${Math.abs(periodPerf).toFixed(2)}% (${equityPeriod})` : `${equityPeriod}: —`;
 
-    // Dividend yield
-    const dy = idx.divYield;
-    const dyLabel = dy != null ? `Div. Yield: ${dy.toFixed(2)}%` : `Div. Yield: —`;
-
     let barWidth = 50;
     if (idx.high52 && idx.low52) {
       const range = idx.high52 - idx.low52;
@@ -131,7 +130,7 @@ function renderIndexCards() {
       <div class="ic-name">${idx.name}</div>
       <div class="ic-price">${fmt(idx.price)}</div>
       <div class="ic-change ${perfCls}">${perfLabel}</div>
-      <div class="ic-per">${dyLabel} · PER Fw: ${idx.per}x</div>
+      <div class="ic-per">PER Fw: ${idx.per}x</div>
       <div class="ic-bar"><div class="ic-bar-fill" style="width:${barWidth.toFixed(0)}%; background: ${(periodPerf||0) >= 0 ? 'var(--green)' : 'var(--red)'}"></div></div>
     </div>`;
   }).join('');
@@ -159,9 +158,9 @@ async function selectIndex(id) {
 
   const chg = idx.change || 0;
   const changeEl = document.getElementById('detail-change');
-  const dy = idx.divYield;
-  changeEl.textContent = dy != null ? dy.toFixed(2) + '%' : '—';
-  changeEl.className = 'metric-val';
+  const ytdVal = idx.ytd;
+  changeEl.textContent = ytdVal != null ? (ytdVal >= 0 ? '+' : '') + ytdVal.toFixed(2) + '%' : '—';
+  changeEl.className = 'metric-val ' + (ytdVal != null ? (ytdVal >= 0 ? 'pos' : 'neg') : '');
 
   document.getElementById('detail-per').textContent = `${idx.per}x`;
   document.getElementById('detail-high').textContent = fmt(idx.high52);
@@ -182,14 +181,16 @@ async function selectIndex(id) {
 
   const maxWeight = Math.max(...holdingsData.map(h => h.weight));
   document.getElementById('holdings-list').innerHTML = holdingsData.map((h, i) => {
-    const chg = h.change || 0;
+    const ytd = h.ytd != null ? h.ytd : (h.change || 0);
+    const displayVal = ytd;
+    const displayLabel = `YTD: ${ytd >= 0 ? '+' : ''}${ytd.toFixed(2)}%`;
     const barW = (h.weight / maxWeight * 100).toFixed(0);
     return `
       <div class="holding-item">
         <span class="h-rank">#${i + 1}</span>
         <span class="h-name">${h.name}<br><small style="color:var(--text3);font-size:10px">${h.ticker}</small></span>
         <span class="h-weight">${h.weight.toFixed(1)}%</span>
-        <span class="h-change ${changeClass(chg)}">${fmtChange(chg)}</span>
+        <span class="h-change ${changeClass(displayVal)}">${displayLabel}</span>
       </div>
       <div class="h-bar-wrap"><div></div><div class="h-bar-bg"><div class="h-bar-fill" style="width:${barW}%"></div></div><div></div><div></div></div>
     `;
@@ -247,13 +248,14 @@ function renderCreditCards() {
 function renderForexCards() {
   const container = document.getElementById('forex-cards');
   container.innerHTML = Object.values(window.marketData.forex).map(pair => {
-    const chg = pair.change || 0;
-    const cls = changeClass(chg);
     const decimals = pair.id === 'dxy' ? 2 : 4;
+    const ytd = pair.ytd != null ? pair.ytd : pair.change || 0;
+    const ytdCls = changeClass(ytd);
+    const ytdLabel = `YTD: ${ytd >= 0 ? '+' : ''}${ytd.toFixed(2)}%`;
     return `<div class="forex-card">
       <div class="fx-pair">${pair.name}</div>
       <div class="fx-rate">${pair.rate?.toFixed(decimals) || '—'}</div>
-      <div class="fx-change ${cls}">${fmtChange(chg)}</div>
+      <div class="fx-change ${ytdCls}">${ytdLabel}</div>
       <div class="fx-meta">${pair.base} / ${pair.quote}</div>
     </div>`;
   }).join('');
@@ -265,8 +267,9 @@ function renderCommodityCards() {
     const el = document.getElementById(containerId);
     if (!el) return;
     el.innerHTML = items.map(c => {
-      const chg = c.change || 0;
-      const cls = changeClass(chg);
+      const ytd = c.ytd != null ? c.ytd : (c.change || 0);
+      const cls = changeClass(ytd);
+      const ytdLabel = `YTD: ${ytd >= 0 ? '+' : ''}${ytd.toFixed(2)}%`;
       return `<div class="comm-card">
         <div>
           <div class="comm-name">${c.name}</div>
@@ -274,7 +277,7 @@ function renderCommodityCards() {
         </div>
         <div>
           <div class="comm-price">${fmt(c.price)}</div>
-          <div class="comm-change ${cls}">${fmtChange(chg)}</div>
+          <div class="comm-change ${cls}">${ytdLabel}</div>
         </div>
       </div>`;
     }).join('');
