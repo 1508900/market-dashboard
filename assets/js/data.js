@@ -215,6 +215,7 @@ function buildFromAPI(apiData) {
         high52: raw.high52, low52: raw.low52,
         dates: raw.dates, closes: raw.closes,
         yield: (100/idx.per).toFixed(2),
+        ytd: raw.ytd != null ? raw.ytd : null,
       });
     }
   });
@@ -281,6 +282,28 @@ function buildFallback() {
   });
 }
 
+
+async function fetchHoldingsFromAPI() {
+  try {
+    var res = await fetch(API_BASE + '/api/holdings', { signal: AbortSignal.timeout(20000) });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch(e) {
+    return null;
+  }
+}
+
+function updateHoldingsWithLiveData(holdingsData) {
+  Object.keys(HOLDINGS).forEach(function(indexId) {
+    window.marketData.holdings[indexId] = HOLDINGS[indexId].map(function(h) {
+      var live = holdingsData[h.ticker];
+      return Object.assign({}, h, {
+        change: live ? +(live.change||0).toFixed(2) : +((Math.random()-0.45)*2).toFixed(2),
+        price: live ? live.price : null,
+      });
+    });
+  });
+}
 function buildHoldings() {
   Object.keys(HOLDINGS).forEach(function(indexId) {
     window.marketData.holdings[indexId] = HOLDINGS[indexId].map(function(h) {
@@ -302,7 +325,13 @@ async function loadAllData() {
     buildFallback();
   }
 
+  // Try to fetch real holdings data in background
   buildHoldings();
+  fetchHoldingsFromAPI().then(function(holdingsData) {
+    if (holdingsData && Object.keys(holdingsData).length > 5) {
+      updateHoldingsWithLiveData(holdingsData);
+    }
+  });
 
   // Yields con pequeño drift
   Object.values(window.marketData.yields).forEach(function(y) {
