@@ -9,22 +9,22 @@ const CHART_DEFAULTS = {
   plugins: {
     legend: { display: false },
     tooltip: {
-      backgroundColor: '#1c2640',
-      borderColor: 'rgba(255,255,255,0.13)',
+      backgroundColor: '#062D3F',
+      borderColor: '#0085CA',
       borderWidth: 1,
-      titleColor: '#8a9bbf',
-      bodyColor: '#e8edf5',
+      titleColor: '#C8DAE2',
+      bodyColor: '#F3F3F3',
       padding: 10,
     },
   },
   scales: {
     x: {
-      grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false },
-      ticks: { color: '#5a6a8a', font: { size: 10 }, maxTicksLimit: 8 },
+      grid: { color: 'rgba(6,45,63,0.06)', drawBorder: false },
+      ticks: { color: '#7A9BAD', font: { size: 10 }, maxTicksLimit: 8 },
     },
     y: {
-      grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false },
-      ticks: { color: '#5a6a8a', font: { size: 10 } },
+      grid: { color: 'rgba(6,45,63,0.06)', drawBorder: false },
+      ticks: { color: '#7A9BAD', font: { size: 10 } },
       position: 'right',
     },
   },
@@ -45,8 +45,8 @@ function renderIndexChart(indexId, period) {
   if (!dates.length) return;
 
   const isPos = closes[closes.length - 1] >= closes[0];
-  const color = isPos ? '#22c55e' : '#ef4444';
-  const colorBg = isPos ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)';
+  const color = isPos ? '#367B35' : '#EB5656';
+  const colorBg = isPos ? 'rgba(54,123,53,0.08)' : 'rgba(235,86,86,0.08)';
 
   destroyChart('index-chart');
   const ctx = document.getElementById('index-chart').getContext('2d');
@@ -86,7 +86,7 @@ function renderSlopeChart() {
   const countries = Object.values(yields);
   const labels = countries.map(c => c.name);
   const slopes = countries.map(c => +(c.y10 - c.y2).toFixed(2));
-  const colors = slopes.map(s => s > 0 ? '#22c55e' : s < -0.1 ? '#ef4444' : '#eab308');
+  const colors = slopes.map(s => s > 0 ? '#367B35' : s < -0.1 ? '#EB5656' : '#eab308');
 
   destroyChart('slope-chart');
   const ctx = document.getElementById('slope-chart').getContext('2d');
@@ -113,10 +113,10 @@ function renderSlopeChart() {
         },
       },
       scales: {
-        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#5a6a8a', font: { size: 11 } } },
+        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#7A9BAD', font: { size: 11 } } },
         y: {
           grid: { color: 'rgba(255,255,255,0.04)' },
-          ticks: { color: '#5a6a8a', font: { size: 10 }, callback: v => `${v > 0 ? '+' : ''}${v}` },
+          ticks: { color: '#7A9BAD', font: { size: 10 }, callback: v => `${v > 0 ? '+' : ''}${v}` },
           position: 'right',
         },
       },
@@ -137,12 +137,12 @@ function renderCurveChart(countryCode) {
       labels: ['1A', '2A', '5A', '10A', '30A'],
       datasets: [{
         data: [y.y1, y.y2, y.y5, y.y10, y.y30],
-        borderColor: '#3b82f6',
-        backgroundColor: 'rgba(59,130,246,0.1)',
+        borderColor: '#0085CA',
+        backgroundColor: 'rgba(0,133,202,0.1)',
         borderWidth: 2,
         fill: true,
         tension: 0.4,
-        pointBackgroundColor: '#3b82f6',
+        pointBackgroundColor: '#0085CA',
         pointRadius: 5,
         pointHoverRadius: 7,
       }],
@@ -157,10 +157,10 @@ function renderCurveChart(countryCode) {
         },
       },
       scales: {
-        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#5a6a8a' } },
+        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#7A9BAD' } },
         y: {
           grid: { color: 'rgba(255,255,255,0.04)' },
-          ticks: { color: '#5a6a8a', callback: v => `${v.toFixed(1)}%` },
+          ticks: { color: '#7A9BAD', callback: v => `${v.toFixed(1)}%` },
           position: 'right',
         },
       },
@@ -193,11 +193,11 @@ function renderCreditCharts() {
     data: {
       labels: igUS.dates.map(d => d.slice(5)),
       datasets: [
-        { label: 'EEUU IG', data: igUS.series, borderColor: '#3b82f6', borderWidth: 1.5, pointRadius: 0, tension: 0.3 },
+        { label: 'EEUU IG', data: igUS.series, borderColor: '#0085CA', borderWidth: 1.5, pointRadius: 0, tension: 0.3 },
         { label: 'Europa IG', data: igEU.series, borderColor: '#a855f7', borderWidth: 1.5, pointRadius: 0, tension: 0.3 },
       ],
     },
-    options: { ...CHART_DEFAULTS, plugins: { ...CHART_DEFAULTS.plugins, legend: { display: true, labels: { color: '#8a9bbf', font: { size: 11 } } } } },
+    options: { ...CHART_DEFAULTS, plugins: { ...CHART_DEFAULTS.plugins, legend: { display: true, labels: { color: '#2A5A72', font: { size: 11 } } } } },
   });
 
   // HY chart
@@ -211,7 +211,7 @@ function renderCreditCharts() {
         { label: 'Europa HY', data: hyEU.series, borderColor: '#eab308', borderWidth: 1.5, pointRadius: 0, tension: 0.3 },
       ],
     },
-    options: { ...CHART_DEFAULTS, plugins: { ...CHART_DEFAULTS.plugins, legend: { display: true, labels: { color: '#8a9bbf', font: { size: 11 } } } } },
+    options: { ...CHART_DEFAULTS, plugins: { ...CHART_DEFAULTS.plugins, legend: { display: true, labels: { color: '#2A5A72', font: { size: 11 } } } } },
   });
 
   // Diff HY-IG chart
@@ -224,11 +224,11 @@ function renderCreditCharts() {
     data: {
       labels: igUS.dates.map(d => d.slice(5)),
       datasets: [
-        { label: 'EEUU HY-IG', data: diffUS, borderColor: '#22c55e', borderWidth: 1.5, pointRadius: 0, tension: 0.3 },
+        { label: 'EEUU HY-IG', data: diffUS, borderColor: '#367B35', borderWidth: 1.5, pointRadius: 0, tension: 0.3 },
         { label: 'Europa HY-IG', data: diffEU, borderColor: '#06b6d4', borderWidth: 1.5, pointRadius: 0, tension: 0.3 },
       ],
     },
-    options: { ...CHART_DEFAULTS, plugins: { ...CHART_DEFAULTS.plugins, legend: { display: true, labels: { color: '#8a9bbf', font: { size: 11 } } } } },
+    options: { ...CHART_DEFAULTS, plugins: { ...CHART_DEFAULTS.plugins, legend: { display: true, labels: { color: '#2A5A72', font: { size: 11 } } } } },
   });
 }
 
@@ -244,7 +244,7 @@ function renderForexCharts() {
       type: 'line',
       data: {
         labels: dates.map(d => d.slice(5)),
-        datasets: [{ data: closes, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.06)', borderWidth: 2, fill: true, tension: 0.3, pointRadius: 0 }],
+        datasets: [{ data: closes, borderColor: '#0085CA', backgroundColor: 'rgba(59,130,246,0.06)', borderWidth: 2, fill: true, tension: 0.3, pointRadius: 0 }],
       },
       options: { ...CHART_DEFAULTS, plugins: { ...CHART_DEFAULTS.plugins, tooltip: { ...CHART_DEFAULTS.plugins.tooltip, callbacks: { label: ctx => ` ${ctx.parsed.y.toFixed(4)}` } } } },
     });
@@ -279,8 +279,8 @@ function renderCommodityCharts() {
     };
   }
 
-  const energyColors = ['#3b82f6', '#f97316', '#eab308'];
-  const metalColors = ['#f59e0b', '#9ca3af', '#ef4444', '#06b6d4', '#a855f7'];
+  const energyColors = ['#0085CA', '#f97316', '#eab308'];
+  const metalColors = ['#f59e0b', '#9ca3af', '#EB5656', '#06b6d4', '#a855f7'];
 
   // Energy
   if (energy.length) {
@@ -304,7 +304,7 @@ function renderCommodityCharts() {
           };
         }),
       },
-      options: { ...CHART_DEFAULTS, plugins: { ...CHART_DEFAULTS.plugins, legend: { display: true, labels: { color: '#8a9bbf', font: { size: 11 } } } } },
+      options: { ...CHART_DEFAULTS, plugins: { ...CHART_DEFAULTS.plugins, legend: { display: true, labels: { color: '#2A5A72', font: { size: 11 } } } } },
     });
   }
 
@@ -331,7 +331,7 @@ function renderCommodityCharts() {
           };
         }),
       },
-      options: { ...CHART_DEFAULTS, plugins: { ...CHART_DEFAULTS.plugins, legend: { display: true, labels: { color: '#8a9bbf', font: { size: 11 } } } } },
+      options: { ...CHART_DEFAULTS, plugins: { ...CHART_DEFAULTS.plugins, legend: { display: true, labels: { color: '#2A5A72', font: { size: 11 } } } } },
     });
   }
 }
