@@ -159,8 +159,9 @@ async function selectIndex(id) {
 
   const chg = idx.change || 0;
   const changeEl = document.getElementById('detail-change');
-  changeEl.textContent = `${fmtChange(chg)} (${fmtChange(idx.changePt, 'pt')})`;
-  changeEl.className = `metric-val ${changeClass(chg)}`;
+  const dy = idx.divYield;
+  changeEl.textContent = dy != null ? dy.toFixed(2) + '%' : '—';
+  changeEl.className = 'metric-val';
 
   document.getElementById('detail-per').textContent = `${idx.per}x`;
   document.getElementById('detail-high').textContent = fmt(idx.high52);
