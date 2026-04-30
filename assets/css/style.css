@@ -568,3 +568,6 @@ body {
 @media (max-width: 1100px) { .vol-charts-row { flex-direction: column; } }
 .vol-charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 @media (max-width: 900px) { .vol-charts-grid { grid-template-columns: 1fr; } }
+
+.vol-charts-3col { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+@media (max-width: 1100px) { .vol-charts-3col { grid-template-columns: 1fr; } }
