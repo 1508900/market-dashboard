@@ -34,7 +34,7 @@ function showSection(name) {
       renderCommodityCharts();
       break;
     case 'correlations':
-      renderCorrelations();
+      setTimeout(function(){ renderCorrelations(); }, 100);
       break;
     case 'sentiment':
       renderSentiment();
@@ -307,6 +307,11 @@ async function init() {
 
   // Load news in background
   loadNews();
+
+  // Pre-render correlations data
+  setTimeout(function(){ 
+    if (typeof renderCorrelations === 'function') renderCorrelations(); 
+  }, 2000);
 
   // Auto-refresh every 5 minutes
   refreshTimer = setInterval(() => {
