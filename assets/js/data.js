@@ -19,8 +19,7 @@ const INDICES = [
 
 const VOLATILITY_INDICES = [
   { id: 'vix',    ticker: '^VIX',    name: 'VIX',    desc: 'Volatilidad implícita S&P 500 (30d)',   market: 'EEUU' },
-  { id: 'vstoxx', ticker: '^VSTOXX', name: 'VSTOXX', desc: 'Volatilidad implícita Euro Stoxx 50',   market: 'Europa' },
-  { id: 'move',   ticker: 'MOVE',    name: 'MOVE',   desc: 'Volatilidad implícita bonos EEUU',      market: 'Bonos' },
+  { id: 'vstoxx', ticker: 'V2TX.DE', name: 'VSTOXX', desc: 'Volatilidad implícita Euro Stoxx 50',   market: 'Europa' },
 ];
 
 const FOREX_PAIRS = [
