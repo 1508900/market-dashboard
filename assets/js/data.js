@@ -479,13 +479,20 @@ function buildVolatilityData(apiData) {
     // If no historical data, derive from VIX or simulate
     if (!dates.length) {
       if (vi.id === 'vstoxx' && result['vix'] && result['vix'].closes.length) {
-        // VSTOXX derived from VIX: usually VIX + 2-3 pts, slightly less volatile
+        // VSTOXX derived from VIX with realistic noise and mean-reversion
         var vixData = result['vix'];
         dates = vixData.dates;
         var currentPrice = price || base;
         var vixLast = vixData.closes[vixData.closes.length - 1];
-        var offset = currentPrice - vixLast;
-        closes = vixData.closes.map(function(v) { return +(v + offset + (Math.random()-0.5)*0.5).toFixed(2); });
+        var offset = currentPrice - vixLast; // base spread
+        // Add realistic noise: VSTOXX moves like VIX but with own dynamics
+        var prevNoise = 0;
+        closes = vixData.closes.map(function(v, i) {
+          // Mean-reverting noise with persistence (AR1 process)
+          prevNoise = prevNoise * 0.7 + (Math.random() - 0.5) * 2.5;
+          var val = v + offset + prevNoise;
+          return +Math.max(10, val).toFixed(2);
+        });
         closes[closes.length - 1] = currentPrice;
       } else {
         var sim = generateSeries(base, vi.ticker || 'VIX', 90);
