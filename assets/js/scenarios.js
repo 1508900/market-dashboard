@@ -24,6 +24,11 @@ const SCENARIOS = {
     equity: {
       bias: 'Defensivo: utilities, salud, consumo básico. Sin cíclicos.',
     },
+    strategies: [
+      { name: 'Inversión de pendiente RF', desc: 'Long bonos largos (10Y-30Y) / Short bonos cortos (2Y). La curva tiende a empinarse en recesión ante expectativas de bajadas de tipos.', icon: '📐' },
+      { name: 'Long Volatilidad', desc: 'Compra de opciones put sobre índices o VIX calls. La volatilidad sube en entornos de contracción económica y risk-off.', icon: '📈' },
+      { name: 'Long Oro / USD', desc: 'Activos refugio clásicos en recesión. El oro sube ante tipos reales negativos y el USD por flight to quality.', icon: '🥇' },
+    ],
   },
   stagflation: {
     id: 'stagflation',
@@ -45,6 +50,11 @@ const SCENARIOS = {
     equity: {
       bias: 'Value, energía, materias primas, real assets.',
     },
+    strategies: [
+      { name: 'Corta Duración RF', desc: 'Infraponderación de bonos largos. La inflación persistente presiona al alza los tipos largos erosionando el precio de bonos de larga duración.', icon: '⏱️' },
+      { name: 'Materias Primas', desc: 'Long commodities (energía, metales). Actúan como cobertura natural de inflación y se benefician de la escasez de oferta.', icon: '🛢️' },
+      { name: 'TIPS / Bonos indexados', desc: 'Bonos ligados a inflación como cobertura directa. Protegen el poder adquisitivo del capital en entornos de inflación elevada.', icon: '🔒' },
+    ],
   },
   growth: {
     id: 'growth',
@@ -66,6 +76,11 @@ const SCENARIOS = {
     equity: {
       bias: 'Growth, tecnología, financieros, cíclicos.',
     },
+    strategies: [
+      { name: 'Apuntamiento de Pendiente RF', desc: 'Short bonos largos / Long bonos cortos. En expansión, la curva tiende a aplanarse o invertirse ante subidas de tipos del banco central.', icon: '📉' },
+      { name: 'Short Volatilidad', desc: 'Venta de volatilidad (opciones, variance swaps). En crecimiento el VIX comprime y la venta de opciones genera prima con baja probabilidad de pérdida.', icon: '📊' },
+      { name: 'Long Crédito HY', desc: 'Los spreads de high yield se estrechan en expansión. Mayor carry con menor riesgo de default gracias al crecimiento de beneficios empresariales.', icon: '💼' },
+    ],
   },
 };
 
@@ -255,16 +270,28 @@ function renderAAResult(aa, probs, domScenario) {
   document.getElementById('sc-aa-metrics').innerHTML =
     '<div class="sc-metric"><span class="sc-metric-label">Renta Variable</span><span class="sc-metric-val" style="color:#0085CA">' + aa.rv.toFixed(1) + '%</span></div>' +
     '<div class="sc-metric"><span class="sc-metric-label">Renta Fija</span><span class="sc-metric-val" style="color:#37BBF4">' + aa.rf.toFixed(1) + '%</span></div>' +
-    '<div class="sc-metric"><span class="sc-metric-label">Duración RF</span><span class="sc-metric-val" style="color:#062D3F">' + aa.duration.toFixed(1) + ' años</span></div>' +
     '<div class="sc-metric"><span class="sc-metric-label">Oro</span><span class="sc-metric-val" style="color:#F59E0B">' + aa.oro.toFixed(1) + '%</span></div>' +
-    '<div class="sc-metric"><span class="sc-metric-label">Exposición USD</span><span class="sc-metric-val" style="color:#062D3F">' + aa.usd.toFixed(1) + '%</span></div>';
+    '<div class="sc-metric"><span class="sc-metric-label">USD</span><span class="sc-metric-val" style="color:#8E44AD">' + aa.usd.toFixed(1) + '%</span></div>' +
+    '<div class="sc-metric" style="grid-column:span 1"><span class="sc-metric-label">Duración RF</span><span class="sc-metric-val" style="color:#062D3F;font-size:14px">' + aa.duration.toFixed(1) + ' años</span></div>';
 
-  // Bias text
+  // Bias text + strategies
+  var strategiesHTML = '';
+  if (domScenario.strategies) {
+    strategiesHTML = '<div class="sc-strategies-title">Estrategias de mercado</div>' +
+      domScenario.strategies.map(function(s) {
+        return '<div class="sc-strategy-item">' +
+          '<div class="sc-strategy-header"><span class="sc-strategy-icon">' + s.icon + '</span><span class="sc-strategy-name">' + s.name + '</span></div>' +
+          '<div class="sc-strategy-desc">' + s.desc + '</div>' +
+        '</div>';
+      }).join('');
+  }
+
   document.getElementById('sc-bias').innerHTML =
     '<div class="sc-bias-box">' +
-      '<div class="sc-bias-title">Posicionamiento recomendado (escenario dominante)</div>' +
+      '<div class="sc-bias-title">Posicionamiento recomendado</div>' +
       '<div class="sc-bias-item"><strong>Renta Fija:</strong> ' + domScenario.fixed_income.bias + '</div>' +
       '<div class="sc-bias-item"><strong>Renta Variable:</strong> ' + domScenario.equity.bias + '</div>' +
+      strategiesHTML +
     '</div>';
 
   // Neutral comparison
