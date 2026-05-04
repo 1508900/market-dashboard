@@ -257,7 +257,7 @@ function renderCreditCards() {
       <div class="cc-region">${c.region}</div>
       <div class="cc-type">${c.type}</div>
       <div class="cc-spread">${c.spread} <small style="font-size:14px;color:var(--text3)">pb</small></div>
-      <div class="cc-change ${cls}">${chg >= 0 ? '+' : ''}${chg} pb hoy</div>
+
     </div>`;
   }).join('');
 }
