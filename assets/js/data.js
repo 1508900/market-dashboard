@@ -48,6 +48,19 @@ const COMMODITIES = {
   ],
 };
 
+// Price validation ranges per commodity (to detect wrong data)
+const COMM_PRICE_RANGES = {
+  'TTF=F':  { min: 10,   max: 200  },  // EUR/MWh
+  'BZ=F':   { min: 40,   max: 150  },  // USD/bbl
+  'CL=F':   { min: 30,   max: 150  },  // USD/bbl
+  'GC=F':   { min: 1500, max: 5000 },  // USD/oz
+  'SI=F':   { min: 10,   max: 100  },  // USD/oz
+  'HG=F':   { min: 2,    max: 10   },  // USD/lb
+  'ALI=F':  { min: 1000, max: 5000 },  // USD/MT
+  'NI=F':   { min: 8000, max: 40000},  // USD/MT
+  'ZNC=F':  { min: 1000, max: 5000 },  // USD/MT
+};
+
 const HOLDINGS = {
   sp500: [
     { name: 'Apple',      ticker: 'AAPL',  weight: 7.1 },
@@ -297,11 +310,19 @@ function buildFromAPI(apiData) {
     window.marketData.commodities[group] = COMMODITIES[group].map(function(item) {
       var raw = apiData[item.ticker];
       if (raw && raw.price) {
+        // Validate price is in expected range
+        var range = COMM_PRICE_RANGES[item.ticker];
+        var price = raw.price;
+        if (range && (price < range.min || price > range.max)) {
+          console.warn('Price out of range for ' + item.ticker + ': ' + price);
+          // Try fallback base price
+          price = BASE_PRICES[item.ticker] || price;
+        }
         return Object.assign({}, item, {
-          price: raw.price, prevClose: raw.prevClose,
+          price: price, prevClose: raw.prevClose,
           dates: raw.dates, closes: raw.closes,
           change: +(raw.change||0).toFixed(2),
-          changePt: +(raw.price - raw.prevClose).toFixed(2),
+          changePt: +(price - raw.prevClose).toFixed(2),
           ytd: raw.ytd != null ? raw.ytd : null,
         });
       }
