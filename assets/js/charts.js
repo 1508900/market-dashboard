@@ -285,9 +285,10 @@ function renderCommodityCharts() {
   const metalColors = ['#f59e0b', '#9ca3af', '#EB5656', '#06b6d4', '#a855f7'];
 
   // Energy
+  var cp = (typeof commPeriod !== 'undefined') ? commPeriod : '3M';
   if (energy.length) {
     const ref = energy[0];
-    const { dates } = filterByPeriod(ref.dates || [], ref.closes || [], '3M');
+    const { dates } = filterByPeriod(ref.dates || [], ref.closes || [], cp);
     destroyChart('energy-chart');
     charts['energy-chart'] = new Chart(document.getElementById('energy-chart').getContext('2d'), {
       type: 'line',
@@ -295,7 +296,7 @@ function renderCommodityCharts() {
         labels: dates.map(d => d.slice(5)),
         datasets: energy.map((item, i) => {
           const idx = indexedSeries(item);
-          const { closes } = filterByPeriod(idx.dates, idx.series, '3M');
+          const { closes } = filterByPeriod(idx.dates, idx.series, cp);
           return {
             label: item.name,
             data: closes,
@@ -314,7 +315,7 @@ function renderCommodityCharts() {
   const allMetals = [...precious, ...industrial];
   if (allMetals.length) {
     const ref = allMetals[0];
-    const { dates } = filterByPeriod(ref.dates || [], ref.closes || [], '3M');
+    const { dates } = filterByPeriod(ref.dates || [], ref.closes || [], cp);
     destroyChart('metals-chart');
     charts['metals-chart'] = new Chart(document.getElementById('metals-chart').getContext('2d'), {
       type: 'line',
@@ -322,7 +323,7 @@ function renderCommodityCharts() {
         labels: dates.map(d => d.slice(5)),
         datasets: allMetals.map((item, i) => {
           const idx = indexedSeries(item);
-          const { closes } = filterByPeriod(idx.dates, idx.series, '3M');
+          const { closes } = filterByPeriod(idx.dates, idx.series, cp);
           return {
             label: item.name,
             data: closes,
