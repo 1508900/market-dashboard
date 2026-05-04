@@ -43,6 +43,9 @@ function showSection(name) {
         setTimeout(function(){ renderVolatility(); }, 500);
       }
       break;
+    case 'scenarios':
+      setTimeout(function(){ if(typeof renderScenarios==='function') renderScenarios(); }, 100);
+      break;
     case 'sentiment':
       renderSentiment();
       break;
@@ -342,10 +345,11 @@ async function init() {
   // Load news in background
   loadNews();
 
-  // Pre-render correlations and volatility data
+  // Pre-render correlations, volatility and scenarios
   setTimeout(function(){ 
     if (typeof renderCorrelations === 'function') renderCorrelations();
     if (typeof renderVolatility === 'function') renderVolatility();
+    if (typeof renderScenarios === 'function') renderScenarios();
   }, 2000);
 
   // Auto-refresh every 5 minutes
