@@ -102,11 +102,22 @@ function updateTickerBar() {
 // ---- INDEX CARDS ----
 function getPeriodPerf(idx, period) {
   if (!idx.dates || !idx.closes || idx.closes.length < 2) return null;
+  
+  // For YTD use pre-calculated ytd from API
+  if (period === 'YTD' && idx.ytd != null) return idx.ytd;
+  
   const filtered = filterByPeriod(idx.dates, idx.closes, period);
   if (!filtered.closes || filtered.closes.length < 2) return null;
   const first = filtered.closes[0];
   const last = filtered.closes[filtered.closes.length - 1];
   if (!first || !last) return null;
+  
+  // For 1Y warn if we don't have enough data
+  if (period === '1Y' && filtered.dates.length < 200) {
+    // Not enough data for 1Y, return null
+    return filtered.dates.length > 20 ? +((last - first) / first * 100).toFixed(2) : null;
+  }
+  
   return +((last - first) / first * 100).toFixed(2);
 }
 
