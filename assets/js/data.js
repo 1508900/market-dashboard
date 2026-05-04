@@ -19,7 +19,7 @@ const INDICES = [
 
 const VOLATILITY_INDICES = [
   { id: 'vix',    ticker: '^VIX',    name: 'VIX',    desc: 'Volatilidad implícita S&P 500 (30d)',   market: 'EEUU' },
-  { id: 'vstoxx', ticker: 'V2TX.DE', name: 'VSTOXX', desc: 'Volatilidad implícita Euro Stoxx 50',   market: 'Europa' },
+  { id: 'vstoxx', ticker: 'OVS.EX',  name: 'VSTOXX', desc: 'Volatilidad implícita Euro Stoxx 50',   market: 'Europa' },
 ];
 
 const FOREX_PAIRS = [
@@ -177,7 +177,7 @@ async function fetchYahooDirect() {
   var tickers = ['^GSPC','^IXIC','^STOXX50E','ACWI','EEM','ILF','MCHI','EWY',
                  'EURUSD=X','DX-Y.NYB','EURJPY=X','EURGBP=X','USDJPY=X',
                  'TTF=F','BZ=F','CL=F','GC=F','SI=F','HG=F','ALI=F','NI=F','ZNC=F',
-                 '^VIX','V2TX.DE'];
+                 '^VIX','OVS.EX'];
   var result = {};
   // Fetch first 8 most important tickers only (to avoid rate limits)
   var priority = ['^GSPC','^IXIC','^STOXX50E','ACWI','EEM','GC=F','BZ=F','EURUSD=X','^VIX'];
