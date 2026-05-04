@@ -23,6 +23,7 @@
   <nav class="nav">
     <button class="nav-btn" onclick="showSection('news')">Noticias</button>
     <button class="nav-btn active" onclick="showSection('equities')">Renta Variable</button>
+    <button class="nav-btn" onclick="showSection('scenarios')">Escenarios</button>
     <button class="nav-btn" onclick="showSection('fixed')">Renta Fija</button>
     <button class="nav-btn" onclick="showSection('credit')">Crédito</button>
     <button class="nav-btn" onclick="showSection('forex')">Divisas</button>
@@ -338,6 +339,38 @@
   </div>
 </section>
 
+<!-- ==================== SECTION: SCENARIOS ==================== -->
+<section id="section-scenarios" class="section">
+  <div class="section-header">
+    <h2>Escenarios Macro y Asset Allocation</h2>
+    <button class="period-btn active" onclick="resetScenarios()">↺ Reset automático</button>
+  </div>
+  <div class="sc-description">
+    Las probabilidades se calculan automáticamente según los indicadores de mercado (curva de tipos, VIX, spreads de crédito, momentum de bolsa). Puedes ajustar manualmente los sliders para ver el asset allocation resultante.
+  </div>
+
+  <div class="sc-layout">
+    <!-- LEFT: Scenario sliders -->
+    <div class="sc-left">
+      <div id="sc-cards" class="sc-cards"></div>
+      <div id="sc-dominant" class="sc-dominant"></div>
+    </div>
+
+    <!-- RIGHT: AA Result -->
+    <div class="sc-right">
+      <div class="sc-aa-panel">
+        <h4>Asset Allocation Resultante</h4>
+        <div class="sc-donut-wrap">
+          <canvas id="sc-donut-chart" height="220"></canvas>
+        </div>
+        <div id="sc-aa-metrics" class="sc-aa-metrics"></div>
+      </div>
+      <div id="sc-vs-neutral" class="sc-vs-neutral"></div>
+      <div id="sc-bias" class="sc-bias"></div>
+    </div>
+  </div>
+</section>
+
 <!-- ==================== SECTION: NEWS ==================== -->
 <section id="section-news" class="section">
   <div class="section-header">
@@ -364,6 +397,7 @@
 <script src="assets/js/data.js"></script>
 <script src="assets/js/charts.js"></script>
 <script src="assets/js/sentiment.js"></script>
+<script src="assets/js/scenarios.js"></script>
 <script src="assets/js/volatility.js"></script>
 <script src="assets/js/correlations.js"></script>
 <script src="assets/js/news.js"></script>
