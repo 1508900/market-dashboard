@@ -11,6 +11,7 @@ const SCENARIOS = {
     color: '#EB5656',
     colorBg: '#FDEAEA',
     description: 'Contracción económica, caída de beneficios, flight to quality',
+    definition: 'Contracción del PIB real durante dos trimestres consecutivos (definición técnica). Se caracteriza por aumento del desempleo, caída del consumo e inversión, deterioro de beneficios empresariales y ampliación de spreads de crédito. Históricamente asociada a bajadas de tipos de los bancos centrales y curva de tipos con pendiente positiva tras período de inversión.',
     allocation: {
       rv:       { min: 10,  max: 20,  label: 'Renta Variable' },
       rf:       { min: 80,  max: 90,  label: 'Renta Fija' },
@@ -37,6 +38,7 @@ const SCENARIOS = {
     color: '#E67E22',
     colorBg: '#FFF3E0',
     description: 'Inflación persistente con bajo crecimiento, tipos altos',
+    definition: 'Combinación de inflación elevada y persistente con crecimiento económico débil o negativo. Dilema para los bancos centrales: subir tipos para combatir inflación agrava la recesión; bajarlos alimenta más inflación. Episodio paradigmático: años 70 tras las crisis del petróleo. Perjudica tanto a bonos (por inflación) como a bolsa (por bajo crecimiento).',
     allocation: {
       rv:       { min: 30,  max: 40,  label: 'Renta Variable' },
       rf:       { min: 60,  max: 70,  label: 'Renta Fija' },
@@ -63,6 +65,7 @@ const SCENARIOS = {
     color: '#367B35',
     colorBg: '#C6F3C6',
     description: 'Expansión económica, beneficios al alza, risk-on',
+    definition: 'Fase expansiva del ciclo económico con crecimiento del PIB por encima del potencial, creación de empleo, mejora de márgenes empresariales y reducción de defaults. El crédito fluye con normalidad, los spreads se estrechan y los activos de riesgo se comportan favorablemente. Puede ir acompañado de presiones inflacionistas moderadas en fases maduras.',
     allocation: {
       rv:       { min: 60,  max: 70,  label: 'Renta Variable' },
       rf:       { min: 30,  max: 40,  label: 'Renta Fija' },
@@ -205,7 +208,12 @@ function renderScenariosUI(probs) {
           '<span class="sc-icon">' + sc.icon + '</span>' +
           '<span class="sc-name">' + sc.name + '</span>' +
         '</div>' +
-        '<span class="sc-prob-badge" style="background:' + sc.colorBg + ';color:' + sc.color + '" id="badge-' + sc.id + '">' + prob + '%</span>' +
+        '<div class="sc-prob-input-wrap">' +
+          '<input type="number" class="sc-prob-input" id="input-' + sc.id + '" min="0" max="100" value="' + prob + '" ' +
+            'style="border-color:' + sc.color + ';color:' + sc.color + '" ' +
+            'onchange="onInputChange(\'' + sc.id + '\', this.value)">' +
+          '<span style="color:' + sc.color + ';font-weight:700">%</span>' +
+        '</div>' +
       '</div>' +
       '<div class="sc-desc">' + sc.description + '</div>' +
       '<input type="range" class="sc-slider" id="slider-' + sc.id + '" min="0" max="100" value="' + prob + '" ' +
@@ -217,6 +225,10 @@ function renderScenariosUI(probs) {
         '<span>Dur: ' + sc.fixed_income.duration.min + (sc.fixed_income.duration.max !== sc.fixed_income.duration.min ? '-' + sc.fixed_income.duration.max : '') + 'a</span>' +
         '<span>Oro: ' + sc.allocation.oro.min + '-' + sc.allocation.oro.max + '%</span>' +
       '</div>' +
+      '<details class="sc-definition">' +
+        '<summary>📖 Definición</summary>' +
+        '<p>' + sc.definition + '</p>' +
+      '</details>' +
     '</div>';
   }).join('');
 
@@ -318,6 +330,12 @@ function buildVsNeutral(label, value, neutralMin, neutralMax, color) {
   '</div>';
 }
 
+function onInputChange(scenarioId, value) {
+  value = Math.max(0, Math.min(100, parseInt(value) || 0));
+  document.getElementById('input-' + scenarioId).value = value;
+  onSliderChange(scenarioId, value);
+}
+
 function onSliderChange(scenarioId, value) {
   value = parseInt(value);
   currentProbs[scenarioId] = value;
@@ -342,9 +360,9 @@ function onSliderChange(scenarioId, value) {
   // Update sliders and badges
   Object.keys(currentProbs).forEach(function(k) {
     var slider = document.getElementById('slider-' + k);
-    var badge = document.getElementById('badge-' + k);
+    var input  = document.getElementById('input-' + k);
     if (slider) slider.value = currentProbs[k];
-    if (badge) badge.textContent = currentProbs[k] + '%';
+    if (input)  input.value  = currentProbs[k];
   });
 
   // Recalculate AA
