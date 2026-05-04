@@ -643,3 +643,11 @@ body {
 .sc-bias-title { font-size: 12px; font-weight: 600; color: var(--afi-blue); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
 .sc-bias-item { font-size: 13px; color: var(--text2); margin-bottom: 6px; line-height: 1.5; }
 .sc-bias-item strong { color: var(--afi-deep); }
+
+/* ---- SCENARIO STRATEGIES ---- */
+.sc-strategies-title { font-size: 12px; font-weight: 600; color: var(--afi-blue); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 14px; margin-bottom: 10px; padding-top: 14px; border-top: 1px solid var(--border); }
+.sc-strategy-item { background: var(--bg3); border-radius: var(--radius); padding: 10px 12px; margin-bottom: 8px; border: 1px solid var(--border); }
+.sc-strategy-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.sc-strategy-icon { font-size: 16px; }
+.sc-strategy-name { font-size: 13px; font-weight: 600; color: var(--afi-deep); }
+.sc-strategy-desc { font-size: 11px; color: var(--text2); line-height: 1.5; }
