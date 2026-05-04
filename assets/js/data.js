@@ -132,13 +132,13 @@ const HOLDINGS = {
 };
 
 const YIELD_DATA = {
-  US: { flag: 'US', name: 'EEUU',     y1: 4.82, y2: 4.61, y5: 4.35, y10: 4.48, y30: 4.72 },
-  DE: { flag: 'DE', name: 'Alemania', y1: 2.48, y2: 2.21, y5: 2.38, y10: 2.61, y30: 2.85 },
-  FR: { flag: 'FR', name: 'Francia',  y1: 2.72, y2: 2.58, y5: 2.89, y10: 3.28, y30: 3.51 },
-  ES: { flag: 'ES', name: 'Espana',   y1: 2.81, y2: 2.68, y5: 2.95, y10: 3.41, y30: 3.72 },
-  IT: { flag: 'IT', name: 'Italia',   y1: 2.98, y2: 2.88, y5: 3.12, y10: 3.78, y30: 4.18 },
-  UK: { flag: 'UK', name: 'UK',       y1: 4.42, y2: 4.28, y5: 4.22, y10: 4.51, y30: 4.98 },
-  JP: { flag: 'JP', name: 'Japon',    y1: 0.48, y2: 0.72, y5: 1.02, y10: 1.48, y30: 2.38 },
+  US: { flag: 'US', name: 'EEUU',     y1: 4.32, y2: 4.18, y5: 4.22, y10: 4.35, y30: 4.78 },
+  DE: { flag: 'DE', name: 'Alemania', y1: 2.12, y2: 2.08, y5: 2.28, y10: 2.68, y30: 3.02 },
+  FR: { flag: 'FR', name: 'Francia',  y1: 2.38, y2: 2.42, y5: 2.78, y10: 3.18, y30: 3.48 },
+  ES: { flag: 'ES', name: 'Espana',   y1: 2.42, y2: 2.48, y5: 2.82, y10: 3.35, y30: 3.68 },
+  IT: { flag: 'IT', name: 'Italia',   y1: 2.68, y2: 2.72, y5: 3.05, y10: 3.72, y30: 4.12 },
+  UK: { flag: 'UK', name: 'UK',       y1: 4.48, y2: 4.38, y5: 4.42, y10: 4.68, y30: 5.12 },
+  JP: { flag: 'JP', name: 'Japon',    y1: 0.62, y2: 0.88, y5: 1.28, y10: 2.50, y30: 3.12 },
 };
 
 const CREDIT_BASE = [
@@ -376,6 +376,34 @@ function buildHoldings() {
   });
 }
 
+async function fetchYieldsFromAPI() {
+  try {
+    var res = await fetch(API_BASE + '/api/yields', { signal: AbortSignal.timeout(20000) });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch(e) {
+    return null;
+  }
+}
+
+function updateYieldsWithLiveData(liveYields) {
+  if (!liveYields) return;
+  var countryMap = {
+    'US': 'US', 'DE': 'DE', 'FR': 'FR', 'ES': 'ES', 'IT': 'IT', 'UK': 'UK', 'JP': 'JP'
+  };
+  Object.keys(countryMap).forEach(function(code) {
+    if (liveYields[code] && window.marketData.yields[code]) {
+      var live = liveYields[code];
+      var current = window.marketData.yields[code];
+      ['y1','y2','y5','y10','y30'].forEach(function(t) {
+        if (live[t] && live[t] > 0 && live[t] < 20) {
+          current[t] = live[t];
+        }
+      });
+    }
+  });
+}
+
 async function loadAllData() {
   document.getElementById('last-update').textContent = 'Cargando datos reales...';
 
@@ -394,6 +422,14 @@ async function loadAllData() {
   fetchHoldingsFromAPI().then(function(holdingsData) {
     if (holdingsData && Object.keys(holdingsData).length > 5) {
       updateHoldingsWithLiveData(holdingsData);
+    }
+  });
+
+  // Fetch real yields in background
+  fetchYieldsFromAPI().then(function(liveYields) {
+    if (liveYields && Object.keys(liveYields).length > 0) {
+      updateYieldsWithLiveData(liveYields);
+      console.log('Real yields loaded:', liveYields);
     }
   });
 
