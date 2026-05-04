@@ -144,10 +144,7 @@ const YIELD_DATA = {
 const CREDIT_BASE = [
   { id: 'us_ig', region: 'EEUU',   type: 'Investment Grade', spread: 98,  change: -2 },
   { id: 'us_hy', region: 'EEUU',   type: 'High Yield',       spread: 312, change: +5 },
-  { id: 'eu_ig', region: 'Europa', type: 'Investment Grade', spread: 112, change: -1 },
   { id: 'eu_hy', region: 'Europa', type: 'High Yield',       spread: 368, change: +8 },
-  { id: 'em_ig', region: 'EM',     type: 'Investment Grade', spread: 148, change: +3 },
-  { id: 'em_hy', region: 'EM',     type: 'High Yield',       spread: 485, change: +12 },
 ];
 
 window.marketData = {
