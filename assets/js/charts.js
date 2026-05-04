@@ -173,20 +173,18 @@ function renderCreditCharts() {
   const credit = window.marketData.credit;
 
   const usIg = credit.find(c => c.id === 'us_ig');
-  const euIg = credit.find(c => c.id === 'eu_ig');
   const usHy = credit.find(c => c.id === 'us_hy');
   const euHy = credit.find(c => c.id === 'eu_hy');
 
   function makeSpreadHistory(item, vol) {
-    // Use real data if available
-    if (item.dates && item.dates.length > 10 && item.values) {
+    if (item && item.dates && item.dates.length > 10 && item.values) {
       return { dates: item.dates, series: item.values };
     }
-    return generateHistoricalSeries(item.spread, 90, vol / item.spread);
+    if (item) return generateHistoricalSeries(item.spread || 100, 90, vol / (item.spread || 100));
+    return { dates: [], series: [] };
   }
 
   const igUS = makeSpreadHistory(usIg, 6);
-  const igEU = makeSpreadHistory(euIg, 8);
   const hyUS = makeSpreadHistory(usHy, 15);
   const hyEU = makeSpreadHistory(euHy, 18);
 
