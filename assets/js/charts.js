@@ -196,7 +196,6 @@ function renderCreditCharts() {
       labels: igUS.dates.map(d => d.slice(5)),
       datasets: [
         { label: 'EEUU IG', data: igUS.series, borderColor: '#0085CA', borderWidth: 1.5, pointRadius: 0, tension: 0.3 },
-        { label: 'Europa IG', data: igEU.series, borderColor: '#a855f7', borderWidth: 1.5, pointRadius: 0, tension: 0.3 },
       ],
     },
     options: { ...CHART_DEFAULTS, plugins: { ...CHART_DEFAULTS.plugins, legend: { display: true, labels: { color: '#2A5A72', font: { size: 11 } } } } },
@@ -218,7 +217,6 @@ function renderCreditCharts() {
 
   // Diff HY-IG chart
   const diffUS = hyUS.series.map((v, i) => +(v - igUS.series[i]).toFixed(0));
-  const diffEU = hyEU.series.map((v, i) => +(v - igEU.series[i]).toFixed(0));
 
   destroyChart('diff-chart');
   charts['diff-chart'] = new Chart(document.getElementById('diff-chart').getContext('2d'), {
