@@ -69,7 +69,7 @@ const SCENARIOS = {
     allocation: {
       rv:       { min: 60,  max: 70,  label: 'Renta Variable' },
       rf:       { min: 30,  max: 40,  label: 'Renta Fija' },
-      oro:      { min: 0,   max: 0,   label: 'Oro' },
+      oro:      { min: 2,   max: 3,   label: 'Oro' },
       usd:      { min: 20,  max: 30,  label: 'Exposición USD' },
     },
     fixed_income: {
