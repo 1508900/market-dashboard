@@ -459,7 +459,13 @@ async function loadAllData() {
   fetchCreditFromAPI().then(function(liveCredit) {
     if (liveCredit && Object.keys(liveCredit).length > 0) {
       updateCreditWithLiveData(liveCredit);
-      console.log('Real credit spreads loaded');
+      // Re-render credit charts with real data
+      if (typeof renderCreditCharts === 'function') {
+        renderCreditCharts();
+      }
+      if (typeof renderCreditCards === 'function') {
+        renderCreditCards();
+      }
     }
   });
 
