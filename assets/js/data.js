@@ -158,13 +158,68 @@ window.marketData = {
 // ---- FETCH ALL DATA FROM API ----
 async function fetchAllFromAPI() {
   try {
-    var res = await fetch(API_BASE + '/api/all', { signal: AbortSignal.timeout(30000) });
+    var res = await fetch(API_BASE + '/api/all', { signal: AbortSignal.timeout(15000) });
     if (!res.ok) return null;
-    return await res.json();
-  } catch(e) {
-    console.warn('API not available:', e.message);
+    var data = await res.json();
+    if (data && Object.keys(data).length > 5) return data;
     return null;
+  } catch(e) {
+    console.warn('API not available, trying Yahoo direct:', e.message);
+    return await fetchYahooDirect();
   }
+}
+
+async function fetchYahooDirect() {
+  var proxies = [
+    'https://api.allorigins.win/get?url=',
+    'https://corsproxy.io/?'
+  ];
+  var tickers = ['^GSPC','^IXIC','^STOXX50E','ACWI','EEM','ILF','MCHI','EWY',
+                 'EURUSD=X','DX-Y.NYB','EURJPY=X','EURGBP=X','USDJPY=X',
+                 'TTF=F','BZ=F','CL=F','GC=F','SI=F','HG=F','ALI=F','NI=F','ZNC=F',
+                 '^VIX','V2TX.DE'];
+  var result = {};
+  // Fetch first 8 most important tickers only (to avoid rate limits)
+  var priority = ['^GSPC','^IXIC','^STOXX50E','ACWI','EEM','GC=F','BZ=F','EURUSD=X','^VIX'];
+  for (var i = 0; i < priority.length; i++) {
+    var ticker = priority[i];
+    for (var p = 0; p < proxies.length; p++) {
+      try {
+        var url = 'https://query1.finance.yahoo.com/v8/finance/chart/' + encodeURIComponent(ticker) + '?interval=1d&range=3mo';
+        var proxyUrl = proxies[p] + encodeURIComponent(url);
+        var res = await fetch(proxyUrl, { signal: AbortSignal.timeout(6000) });
+        var json = await res.json();
+        var raw = typeof json.contents === 'string' ? JSON.parse(json.contents) : json;
+        var chartResult = raw.chart && raw.chart.result && raw.chart.result[0];
+        if (!chartResult) continue;
+        var meta = chartResult.meta;
+        var timestamps = chartResult.timestamp || [];
+        var closes = (chartResult.indicators && chartResult.indicators.quote && chartResult.indicators.quote[0] && chartResult.indicators.quote[0].close) || [];
+        var price = meta.regularMarketPrice;
+        var prev = meta.chartPreviousClose || meta.regularMarketPreviousClose;
+        if (!price) continue;
+        var dates = timestamps.map(function(t) { return new Date(t*1000).toISOString().split('T')[0]; });
+        var validCloses = closes.map(function(c) { return c ? +c.toFixed(4) : null; });
+        var pairs = dates.map(function(d,i) { return {d:d,c:validCloses[i]}; }).filter(function(p) { return p.c; });
+        var ytd = null;
+        for (var j = 0; j < pairs.length; j++) {
+          if (pairs[j].d >= '2026-01-01') { ytd = +((price - pairs[j].c) / pairs[j].c * 100).toFixed(2); break; }
+        }
+        result[ticker] = {
+          ticker: ticker, price: +price.toFixed(4), prevClose: +prev.toFixed(4),
+          change: prev ? +((price-prev)/prev*100).toFixed(2) : 0,
+          ytd: ytd,
+          high52: +(meta.fiftyTwoWeekHigh||price).toFixed(4),
+          low52: +(meta.fiftyTwoWeekLow||price).toFixed(4),
+          dates: pairs.map(function(p){return p.d;}),
+          closes: pairs.map(function(p){return p.c;}),
+        };
+        break;
+      } catch(e) { /* try next proxy */ }
+    }
+    await new Promise(function(r){setTimeout(r,200);});
+  }
+  return Object.keys(result).length > 3 ? result : null;
 }
 
 // ---- FALLBACK SIMULATION ----
@@ -385,11 +440,22 @@ function buildVolatilityData(apiData) {
     var dates = raw ? raw.dates : [];
     var closes = raw ? raw.closes : [];
 
-    // If no real data, simulate
+    // If no historical data, derive from VIX or simulate
     if (!dates.length) {
-      var sim = generateSeries(base, vi.ticker || 'VIX', 90);
-      dates = sim.dates; closes = sim.closes;
-      price = base; prev = base * 0.98; chg = 0;
+      if (vi.id === 'vstoxx' && result['vix'] && result['vix'].closes.length) {
+        // VSTOXX derived from VIX: usually VIX + 2-3 pts, slightly less volatile
+        var vixData = result['vix'];
+        dates = vixData.dates;
+        var currentPrice = price || base;
+        var vixLast = vixData.closes[vixData.closes.length - 1];
+        var offset = currentPrice - vixLast;
+        closes = vixData.closes.map(function(v) { return +(v + offset + (Math.random()-0.5)*0.5).toFixed(2); });
+        closes[closes.length - 1] = currentPrice;
+      } else {
+        var sim = generateSeries(base, vi.ticker || 'VIX', 90);
+        dates = sim.dates; closes = sim.closes;
+        if (!raw) { price = base; prev = base * 0.98; chg = 0; }
+      }
     }
 
     var ref = refs[vi.id];
