@@ -346,6 +346,32 @@ function buildFallback() {
 }
 
 
+async function fetchCreditFromAPI() {
+  try {
+    var res = await fetch(API_BASE + '/api/credit', { signal: AbortSignal.timeout(20000) });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch(e) {
+    return null;
+  }
+}
+
+function updateCreditWithLiveData(liveCredit) {
+  if (!liveCredit) return;
+  window.marketData.credit = window.marketData.credit.map(function(c) {
+    var live = liveCredit[c.id];
+    if (live) {
+      return Object.assign({}, c, {
+        spread: live.spread,
+        change: live.change,
+        dates: live.dates,
+        values: live.values,
+      });
+    }
+    return c;
+  });
+}
+
 async function fetchHoldingsFromAPI() {
   try {
     var res = await fetch(API_BASE + '/api/holdings', { signal: AbortSignal.timeout(20000) });
@@ -429,7 +455,14 @@ async function loadAllData() {
   fetchYieldsFromAPI().then(function(liveYields) {
     if (liveYields && Object.keys(liveYields).length > 0) {
       updateYieldsWithLiveData(liveYields);
-      console.log('Real yields loaded:', liveYields);
+    }
+  });
+
+  // Fetch real credit spreads from FRED/ICE BofA
+  fetchCreditFromAPI().then(function(liveCredit) {
+    if (liveCredit && Object.keys(liveCredit).length > 0) {
+      updateCreditWithLiveData(liveCredit);
+      console.log('Real credit spreads loaded');
     }
   });
 
