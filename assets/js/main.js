@@ -4,6 +4,7 @@
 
 let selectedIndex = 'sp500';
 let equityPeriod = '1W';
+let commPeriod = '1W';
 let selectedCurveCountry = 'US';
 let refreshTimer = null;
 
@@ -280,14 +281,34 @@ function renderForexCards() {
 }
 
 // ---- COMMODITY CARDS ----
+function setCommPeriod(period, btn) {
+  commPeriod = period;
+  document.querySelectorAll('.comm-period-btn').forEach(function(b){ b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  renderCommodityCards();
+  renderCommodityCharts();
+}
+
+function getCommPeriodPerf(item, period) {
+  if (!item.dates || !item.closes || item.closes.length < 2) return null;
+  if (period === 'YTD' && item.ytd != null) return item.ytd;
+  var filtered = filterByPeriod(item.dates, item.closes, period);
+  if (!filtered.closes || filtered.closes.length < 2) return null;
+  var first = filtered.closes[0];
+  var last = filtered.closes[filtered.closes.length - 1];
+  if (!first || !last) return null;
+  return +((last - first) / first * 100).toFixed(2);
+}
+
 function renderCommodityCards() {
   function makeCards(items, containerId) {
     const el = document.getElementById(containerId);
     if (!el) return;
     el.innerHTML = items.map(c => {
-      const ytd = c.ytd != null ? c.ytd : (c.change || 0);
-      const cls = changeClass(ytd);
-      const ytdLabel = `YTD: ${ytd >= 0 ? '+' : ''}${ytd.toFixed(2)}%`;
+      const perf = getCommPeriodPerf(c, commPeriod);
+      const displayPerf = perf != null ? perf : (c.change || 0);
+      const cls = changeClass(displayPerf);
+      const perfLabel = `${commPeriod}: ${displayPerf >= 0 ? '+' : ''}${displayPerf.toFixed(2)}%`;
       return `<div class="comm-card">
         <div>
           <div class="comm-name">${c.name}</div>
@@ -295,7 +316,7 @@ function renderCommodityCards() {
         </div>
         <div>
           <div class="comm-price">${fmt(c.price)}</div>
-          <div class="comm-change ${cls}">${ytdLabel}</div>
+          <div class="comm-change ${cls}">${perfLabel}</div>
         </div>
       </div>`;
     }).join('');
