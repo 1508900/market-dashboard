@@ -42,30 +42,6 @@ function timeSince(date) {
   return `${Math.floor(seconds / 86400)}d`;
 }
 
-async function fetchNewsAPI(query, category) {
-  try {
-    const url = `${NEWS_API_BASE}?q=${encodeURIComponent(query)}&language=en&sortBy=publishedAt&pageSize=4&apiKey=${NEWS_API_KEY}`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
-    const json = await res.json();
-    
-    if (json.status !== 'ok' || !json.articles) return [];
-    
-    return json.articles
-      .filter(a => a.title && a.title !== '[Removed]' && a.url)
-      .map(a => ({
-        title: a.title,
-        summary: (a.description || '').slice(0, 200) + (a.description && a.description.length > 200 ? '...' : ''),
-        category: category,
-        source: a.source?.name || 'News',
-        time: timeSince(new Date(a.publishedAt)),
-        url: a.url,
-        date: new Date(a.publishedAt),
-      }));
-  } catch(e) {
-    return [];
-  }
-}
-
 async function loadNews() {
   if (newsLoaded) {
     renderNews(activeFilter);
@@ -76,26 +52,23 @@ async function loadNews() {
   grid.innerHTML = '<div class="loading"><div class="pulse"></div>Cargando noticias...</div>';
 
   try {
-    // Fetch 3 queries in parallel to save API calls
-    const [equityNews, ratesNews, macroNews] = await Promise.all([
-      fetchNewsAPI(NEWS_QUERIES[0].q, 'equities'),
-      fetchNewsAPI(NEWS_QUERIES[1].q, 'rates'),
-      fetchNewsAPI(NEWS_QUERIES[5].q, 'macro'),
-    ]);
-
-    // Fetch 2 more
-    const [commNews, creditNews] = await Promise.all([
-      fetchNewsAPI(NEWS_QUERIES[4].q, 'commodities'),
-      fetchNewsAPI(NEWS_QUERIES[3].q, 'credit'),
-    ]);
-
-    const liveNews = [...equityNews, ...ratesNews, ...macroNews, ...commNews, ...creditNews];
-    
-    if (liveNews.length > 5) {
-      // Sort by date
-      liveNews.sort((a, b) => (b.date || 0) - (a.date || 0));
-      allNews = liveNews;
-      newsLoaded = true;
+    // Fetch news via our API server (avoids CORS/426 issues)
+    const res = await fetch('https://market-api-ah0l.onrender.com/api/news', { 
+      signal: AbortSignal.timeout(15000) 
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.length > 5) {
+        allNews = data.map(a => ({
+          ...a,
+          date: new Date(a.publishedAt || a.date),
+          time: timeSince(new Date(a.publishedAt || a.date)),
+        }));
+        allNews.sort((a, b) => (b.date || 0) - (a.date || 0));
+        newsLoaded = true;
+      } else {
+        allNews = FALLBACK_NEWS;
+      }
     } else {
       allNews = FALLBACK_NEWS;
     }
