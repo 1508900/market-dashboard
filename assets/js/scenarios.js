@@ -89,8 +89,8 @@ const SCENARIOS = {
 
 const NEUTRAL = {
   rv:       { min: 40,  max: 50,  label: 'Renta Variable' },
-  rf:       { min: 50,  max: 60,  label: 'Renta Fija' },
-  oro:      { min: 0,   max: 0,   label: 'Oro' },
+  rf:       { min: 47,  max: 57,  label: 'Renta Fija' },
+  oro:      { min: 3,   max: 3,   label: 'Oro' },
   usd:      { min: 20,  max: 25,  label: 'Exposición USD' },
   duration: { min: 3.5, max: 4,   label: 'Duración RF (años)' },
 };
@@ -309,24 +309,28 @@ function renderAAResult(aa, probs, domScenario) {
   // Neutral comparison
   document.getElementById('sc-vs-neutral').innerHTML =
     '<div class="sc-neutral-title">vs. Posición Neutral</div>' +
-    buildVsNeutral('Renta Variable', aa.rv, NEUTRAL.rv.min, NEUTRAL.rv.max, '#0085CA') +
-    buildVsNeutral('Renta Fija', aa.rf, NEUTRAL.rf.min, NEUTRAL.rf.max, '#37BBF4') +
-    buildVsNeutral('Duración RF', aa.duration, NEUTRAL.duration.min, NEUTRAL.duration.max, '#062D3F') +
-    buildVsNeutral('Oro', aa.oro, NEUTRAL.oro.min, NEUTRAL.oro.max, '#F59E0B') +
-    buildVsNeutral('USD', aa.usd, NEUTRAL.usd.min, NEUTRAL.usd.max, '#8E44AD');
+    buildVsNeutral('Renta Variable', aa.rv, NEUTRAL.rv.min, NEUTRAL.rv.max, '#0085CA', false) +
+    buildVsNeutral('Renta Fija', aa.rf, NEUTRAL.rf.min, NEUTRAL.rf.max, '#37BBF4', false) +
+    buildVsNeutral('Duración RF', aa.duration, NEUTRAL.duration.min, NEUTRAL.duration.max, '#062D3F', true) +
+    buildVsNeutral('Oro', aa.oro, NEUTRAL.oro.min, NEUTRAL.oro.max, '#F59E0B', false) +
+    buildVsNeutral('USD', aa.usd, NEUTRAL.usd.min, NEUTRAL.usd.max, '#8E44AD', false);
 }
 
-function buildVsNeutral(label, value, neutralMin, neutralMax, color) {
+function buildVsNeutral(label, value, neutralMin, neutralMax, color, isDuration) {
   var neutralMid = (neutralMin + neutralMax) / 2;
   var diff = value - neutralMid;
   var sign = diff >= 0 ? '+' : '';
-  var cls = diff > 0.5 ? 'pos' : diff < -0.5 ? 'neg' : 'neutral';
-  var arrow = diff > 0.5 ? '▲' : diff < -0.5 ? '▼' : '—';
+  var cls = diff > 0.2 ? 'pos' : diff < -0.2 ? 'neg' : 'neutral';
+  var arrow = diff > 0.2 ? '▲' : diff < -0.2 ? '▼' : '—';
+  var suffix = isDuration ? 'a' : '%';
+  var rangeStr = isDuration 
+    ? (neutralMin + (neutralMax !== neutralMin ? '-' + neutralMax : '') + 'a')
+    : (neutralMin + (neutralMax !== neutralMin ? '-' + neutralMax : '') + '%');
   return '<div class="sc-neutral-row">' +
     '<span class="sc-neutral-label">' + label + '</span>' +
-    '<span class="sc-neutral-range">' + neutralMin + (neutralMax !== neutralMin ? '-' + neutralMax : '') + '%</span>' +
-    '<span class="sc-neutral-val" style="color:' + color + '">' + value.toFixed(1) + '%</span>' +
-    '<span class="sc-neutral-diff ' + cls + '">' + arrow + ' ' + sign + diff.toFixed(1) + '%</span>' +
+    '<span class="sc-neutral-range">' + rangeStr + '</span>' +
+    '<span class="sc-neutral-val" style="color:' + color + '">' + value.toFixed(1) + suffix + '</span>' +
+    '<span class="sc-neutral-diff ' + cls + '">' + arrow + ' ' + sign + diff.toFixed(1) + suffix + '</span>' +
   '</div>';
 }
 
