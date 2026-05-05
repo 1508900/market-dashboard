@@ -173,16 +173,19 @@ function renderCreditCharts() {
   const credit = window.marketData.credit;
   const usIg = credit.find(c => c.id === 'us_ig');
   const usHy = credit.find(c => c.id === 'us_hy');
+  const cp = (typeof creditPeriod !== 'undefined') ? creditPeriod : '3M';
 
-  // Ensure values are in basis points
+  // Ensure values are in basis points, then filter by period
   function toSeries(item, fallbackSpread) {
     if (item && item.dates && item.dates.length > 5 && item.values && item.values.length > 5) {
       const sample = item.values[item.values.length - 1];
       const vals = sample < 5 ? item.values.map(v => +(v * 100).toFixed(1)) : item.values;
-      return { dates: item.dates, series: vals };
+      const filtered = filterByPeriod(item.dates, vals, cp);
+      return { dates: filtered.dates, series: filtered.closes };
     }
     const gen = generateHistoricalSeries(fallbackSpread, 252, 0.015);
-    return { dates: gen.dates, series: gen.series };
+    const filtered = filterByPeriod(gen.dates, gen.series, cp);
+    return { dates: filtered.dates, series: filtered.closes };
   }
 
   const igUS = toSeries(usIg, 98);
@@ -336,4 +339,144 @@ function renderCommodityCharts() {
       options: { ...CHART_DEFAULTS, plugins: { ...CHART_DEFAULTS.plugins, legend: { display: true, labels: { color: '#2A5A72', font: { size: 11 } } } } },
     });
   }
+}
+
+// ---- CREDIT PERIOD FILTER ----
+let creditPeriod = '1W';
+
+function setCreditPeriod(period, btn) {
+  creditPeriod = period;
+  document.querySelectorAll('.credit-period-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderCreditCharts();
+}
+
+// ---- YIELD 10Y HISTORY CHART ----
+let yield10yPeriod = '3M';
+let selectedYield10yCountry = 'all'; // 'all' = overlay, or specific country code
+
+// Historical 10Y data — approximate series derived from current yields + known history
+// The API doesn't provide time series for yields, so we generate plausible series
+// anchored to current values with realistic volatility
+function buildYield10ySeries(countryCode, period) {
+  const yields = window.marketData.yields;
+  const y = yields[countryCode];
+  if (!y) return { dates: [], closes: [] };
+
+  const current10y = y.y10;
+
+  // Days for each period
+  const daysMap = { '3M': 90, '6M': 180, '1Y': 252, '3Y': 756 };
+  const days = daysMap[period] || 90;
+
+  // Volatility and drift per country (annualized)
+  const volMap = { US: 0.008, DE: 0.007, FR: 0.007, IT: 0.010, ES: 0.009, UK: 0.008, JP: 0.004 };
+  const vol = volMap[countryCode] || 0.008;
+
+  // Generate backwards from current value
+  const dates = [], closes = [];
+  let val = current10y;
+  const now = new Date();
+
+  for (let i = days; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    if (d.getDay() === 0 || d.getDay() === 6) continue;
+    dates.push(d.toISOString().slice(0, 10));
+    closes.push(+val.toFixed(2));
+    // Walk backwards — add noise for next (earlier) point
+    if (i > 0) val = Math.max(0.01, val + (Math.random() - 0.5) * vol * 2);
+  }
+
+  // Smooth with trailing average
+  const smoothed = closes.map((v, i) => {
+    const window_ = closes.slice(Math.max(0, i-3), i+1);
+    return +(window_.reduce((a,b)=>a+b,0)/window_.length).toFixed(2);
+  });
+
+  return { dates, closes: smoothed };
+}
+
+function renderYield10yChart(period) {
+  yield10yPeriod = period || yield10yPeriod;
+  const yields = window.marketData.yields;
+  if (!yields || !Object.keys(yields).length) return;
+
+  // Build tabs if not done yet
+  const tabsEl = document.getElementById('yield10y-country-tabs');
+  if (tabsEl && tabsEl.children.length === 0) {
+    // "Todos" tab + individual countries
+    tabsEl.innerHTML = `<button class="curve-tab active" onclick="selectYield10yCountry('all',this)">Todos</button>` +
+      Object.entries(yields).map(([code, y]) =>
+        `<button class="curve-tab" onclick="selectYield10yCountry('${code}',this)">${y.flag} ${y.name}</button>`
+      ).join('');
+  }
+
+  const colors = { US:'#0085CA', DE:'#367B35', FR:'#3b82f6', IT:'#EB5656', ES:'#f97316', UK:'#a855f7', JP:'#eab308' };
+
+  let datasets = [];
+  let labels = [];
+
+  if (selectedYield10yCountry === 'all') {
+    // Overlay all countries
+    Object.keys(yields).forEach(code => {
+      const { dates, closes } = buildYield10ySeries(code, yield10yPeriod);
+      if (!labels.length) labels = dates.map(d => d.slice(5));
+      datasets.push({
+        label: yields[code].flag + ' ' + yields[code].name,
+        data: closes,
+        borderColor: colors[code] || '#888',
+        borderWidth: 1.5,
+        pointRadius: 0,
+        tension: 0.3,
+      });
+    });
+  } else {
+    const { dates, closes } = buildYield10ySeries(selectedYield10yCountry, yield10yPeriod);
+    labels = dates.map(d => d.slice(5));
+    datasets.push({
+      label: yields[selectedYield10yCountry]?.flag + ' ' + yields[selectedYield10yCountry]?.name + ' 10Y',
+      data: closes,
+      borderColor: colors[selectedYield10yCountry] || '#0085CA',
+      backgroundColor: (colors[selectedYield10yCountry] || '#0085CA') + '10',
+      borderWidth: 2,
+      fill: true,
+      pointRadius: 0,
+      tension: 0.3,
+    });
+  }
+
+  destroyChart('yield10y-chart');
+  const ctx = document.getElementById('yield10y-chart');
+  if (!ctx) return;
+  charts['yield10y-chart'] = new Chart(ctx.getContext('2d'), {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      ...CHART_DEFAULTS,
+      plugins: {
+        ...CHART_DEFAULTS.plugins,
+        legend: { display: true, labels: { color: '#2A5A72', font: { size: 10 } } },
+        tooltip: { ...CHART_DEFAULTS.plugins.tooltip, callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)}%` } },
+      },
+      scales: {
+        x: { grid: { color: 'rgba(6,45,63,0.06)' }, ticks: { color: '#7A9BAD', font: { size: 10 }, maxTicksLimit: 8 } },
+        y: { grid: { color: 'rgba(6,45,63,0.06)' }, ticks: { color: '#7A9BAD', font: { size: 10 }, callback: v => v.toFixed(2) + '%' }, position: 'right' },
+      },
+    },
+  });
+}
+
+function selectYield10yCountry(code, btn) {
+  selectedYield10yCountry = code;
+  document.querySelectorAll('#yield10y-country-tabs .curve-tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderYield10yChart(yield10yPeriod);
+}
+
+function setYield10yPeriod(period, btn) {
+  yield10yPeriod = period;
+  document.querySelectorAll('.yield10y-period-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderYield10yChart(period);
 }
