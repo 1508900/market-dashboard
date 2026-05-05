@@ -366,8 +366,21 @@ function getYield10ySeries(countryCode, period) {
   let dates, values;
 
   if (real && real.dates && real.dates.length > 5) {
-    dates  = real.dates;
-    values = real.values;
+    dates  = [...real.dates];
+    values = [...real.values];
+
+    // Extend to today repeating last known value (FRED/ECB have ~3-5 day lag)
+    const lastVal = values[values.length - 1];
+    let d = new Date(dates[dates.length - 1]);
+    const today = new Date();
+    d.setDate(d.getDate() + 1);
+    while (d <= today) {
+      if (d.getDay() !== 0 && d.getDay() !== 6) {
+        dates.push(d.toISOString().slice(0, 10));
+        values.push(lastVal);
+      }
+      d.setDate(d.getDate() + 1);
+    }
 
     // If monthly data (< 60 points for 3 years), interpolate to daily
     if (dates.length < 200) {
