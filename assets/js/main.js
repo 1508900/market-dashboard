@@ -253,12 +253,14 @@ function renderCreditCards() {
   const container = document.getElementById('credit-cards');
   container.innerHTML = window.marketData.credit.map(c => {
     const chg = c.change || 0;
-    const cls = chg > 0 ? 'neg' : 'pos'; // wider spread = negative for market
+    const chgCls = chg > 0 ? 'neg' : 'pos';
+    const chgSign = chg > 0 ? '+' : '';
+    const typeLabel = c.type === 'ig' ? 'Investment Grade' : c.type === 'hy' ? 'High Yield' : (c.name || c.type);
     return `<div class="credit-card">
       <div class="cc-region">${c.region}</div>
-      <div class="cc-type">${c.type}</div>
+      <div class="cc-type">${typeLabel}</div>
       <div class="cc-spread">${c.spread} <small style="font-size:14px;color:var(--text3)">pb</small></div>
-
+      <div class="cc-change ${chgCls}" style="font-size:12px;margin-top:4px">${chgSign}${chg} pb</div>
     </div>`;
   }).join('');
 }
