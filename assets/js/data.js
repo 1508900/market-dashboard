@@ -143,10 +143,14 @@ const HOLDINGS_META = {
     { ticker: 'AVGO',  name: 'Broadcom',      weight: 2.9 },
   ],
   eurostoxx: [
-    { ticker: 'ASML',  name: 'ASML',          weight: 7.1 },
-    { ticker: 'SAP',   name: 'SAP',           weight: 4.8 },
-    { ticker: 'NVDA',  name: 'NVIDIA (proxy)', weight: 3.5 },
-    { ticker: 'AMZN',  name: 'Amazon (proxy)', weight: 3.0 },
+    { ticker: 'ASML',    name: 'ASML',          weight: 7.1 },
+    { ticker: 'SAP',     name: 'SAP',           weight: 4.8 },
+    { ticker: 'AIR.PA',  name: 'Airbus',        weight: 4.3 },
+    { ticker: 'SIE.DE',  name: 'Siemens',       weight: 4.1 },
+    { ticker: 'MC.PA',   name: 'LVMH',          weight: 3.8 },
+    { ticker: 'TTE.PA',  name: 'TotalEnergies', weight: 3.5 },
+    { ticker: 'BNP.PA',  name: 'BNP Paribas',   weight: 3.1 },
+    { ticker: 'DTE.DE',  name: 'Deutsche Telekom', weight: 2.9 },
   ],
   msci_acwi: [
     { ticker: 'AAPL',  name: 'Apple',         weight: 4.1 },
@@ -180,8 +184,14 @@ const HOLDINGS_META = {
     { ticker: 'BIDU',  name: 'Baidu',         weight: 3.9 },
   ],
   korea:     [
-    { ticker: 'NVDA',  name: 'Samsung (proxy)',weight: 18.4 },
-    { ticker: 'MSFT',  name: 'SK Hynix (proxy)',weight: 8.9 },
+    { ticker: '005930.KS', name: 'Samsung Electronics', weight: 18.4 },
+    { ticker: '000660.KS', name: 'SK Hynix',            weight: 8.9  },
+    { ticker: '207940.KS', name: 'Samsung Biologics',   weight: 5.2  },
+    { ticker: '005380.KS', name: 'Hyundai Motor',       weight: 4.8  },
+    { ticker: '035720.KS', name: 'Kakao',               weight: 3.6  },
+    { ticker: '051910.KS', name: 'LG Chem',             weight: 3.1  },
+    { ticker: '006400.KS', name: 'Samsung SDI',         weight: 2.9  },
+    { ticker: '035420.KS', name: 'NAVER',               weight: 2.7  },
   ],
 };
 
