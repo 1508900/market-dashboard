@@ -216,7 +216,12 @@ function renderCreditCharts() {
   });
 
   // Diff HY-IG chart
-  const diffUS = hyUS.series.map((v, i) => +(v - igUS.series[i]).toFixed(0));
+  const diffUS = hyUS.series.map((v, i) => +(v - (igUS.series[i] || igUS.series[0] || 100)).toFixed(0));
+  const diffEU = hyEU.series.map((v, i) => {
+    const igEU = window.marketData.credit.find(c => c.id === 'eu_ig');
+    const igEUSeries = igEU && igEU.values ? igEU.values : Array(hyEU.series.length).fill(igEU ? igEU.spread : 112);
+    return +(v - (igEUSeries[i] || igEUSeries[0] || 112)).toFixed(0);
+  });
 
   destroyChart('diff-chart');
   charts['diff-chart'] = new Chart(document.getElementById('diff-chart').getContext('2d'), {
@@ -225,7 +230,7 @@ function renderCreditCharts() {
       labels: igUS.dates.map(d => d.slice(5)),
       datasets: [
         { label: 'EEUU HY-IG', data: diffUS, borderColor: '#367B35', borderWidth: 1.5, pointRadius: 0, tension: 0.3 },
-        { label: 'Europa HY-IG', data: diffEU, borderColor: '#06b6d4', borderWidth: 1.5, pointRadius: 0, tension: 0.3 },
+        { label: 'Europa HY-IG', data: diffEU.slice(0, diffUS.length), borderColor: '#06b6d4', borderWidth: 1.5, pointRadius: 0, tension: 0.3 },
       ],
     },
     options: { ...CHART_DEFAULTS, plugins: { ...CHART_DEFAULTS.plugins, legend: { display: true, labels: { color: '#2A5A72', font: { size: 11 } } } } },
