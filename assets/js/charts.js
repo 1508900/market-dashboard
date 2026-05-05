@@ -216,12 +216,10 @@ function renderCreditCharts() {
   });
 
   // Diff HY-IG chart
+  const euIg = window.marketData.credit.find(c => c.id === 'eu_ig');
+  const euIgSeries = makeSpreadHistory(euIg, 6);
   const diffUS = hyUS.series.map((v, i) => +(v - (igUS.series[i] || igUS.series[0] || 100)).toFixed(0));
-  const diffEU = hyEU.series.map((v, i) => {
-    const igEU = window.marketData.credit.find(c => c.id === 'eu_ig');
-    const igEUSeries = igEU && igEU.values ? igEU.values : Array(hyEU.series.length).fill(igEU ? igEU.spread : 112);
-    return +(v - (igEUSeries[i] || igEUSeries[0] || 112)).toFixed(0);
-  });
+  const diffEU = hyEU.series.map((v, i) => +(v - (euIgSeries.series[i] || euIgSeries.series[0] || 120)).toFixed(0));
 
   destroyChart('diff-chart');
   charts['diff-chart'] = new Chart(document.getElementById('diff-chart').getContext('2d'), {
@@ -275,34 +273,35 @@ function renderCommodityCharts() {
   const precious = window.marketData.commodities.precious || [];
   const industrial = window.marketData.commodities.industrial || [];
 
-  function indexedSeries(item) {
-    if (!item.closes || item.closes.length === 0) return { dates: [], series: [] };
-    const base = item.closes[0];
+  // Filter by period FIRST, then rebase to 100 from the first point of that period
+  function periodIndexed(item, period) {
+    const { dates, closes } = filterByPeriod(item.dates || [], item.closes || [], period);
+    if (!closes || closes.length === 0) return { dates: [], series: [] };
+    const base = closes[0];
     return {
-      dates: item.dates,
-      series: item.closes.map(c => +(c / base * 100).toFixed(2)),
+      dates,
+      series: closes.map(c => +(c / base * 100).toFixed(2)),
     };
   }
 
   const energyColors = ['#0085CA', '#f97316', '#eab308'];
   const metalColors = ['#f59e0b', '#9ca3af', '#EB5656', '#06b6d4', '#a855f7'];
 
-  // Energy
   var cp = (typeof commPeriod !== 'undefined') ? commPeriod : '3M';
+
+  // Energy
   if (energy.length) {
-    const ref = energy[0];
-    const { dates } = filterByPeriod(ref.dates || [], ref.closes || [], cp);
+    const refData = periodIndexed(energy[0], cp);
     destroyChart('energy-chart');
     charts['energy-chart'] = new Chart(document.getElementById('energy-chart').getContext('2d'), {
       type: 'line',
       data: {
-        labels: dates.map(d => d.slice(5)),
+        labels: refData.dates.map(d => d.slice(5)),
         datasets: energy.map((item, i) => {
-          const idx = indexedSeries(item);
-          const { closes } = filterByPeriod(idx.dates, idx.series, cp);
+          const pd = periodIndexed(item, cp);
           return {
             label: item.name,
-            data: closes,
+            data: pd.series,
             borderColor: energyColors[i] || '#fff',
             borderWidth: 1.5,
             pointRadius: 0,
@@ -317,19 +316,17 @@ function renderCommodityCharts() {
   // Metals
   const allMetals = [...precious, ...industrial];
   if (allMetals.length) {
-    const ref = allMetals[0];
-    const { dates } = filterByPeriod(ref.dates || [], ref.closes || [], cp);
+    const refData = periodIndexed(allMetals[0], cp);
     destroyChart('metals-chart');
     charts['metals-chart'] = new Chart(document.getElementById('metals-chart').getContext('2d'), {
       type: 'line',
       data: {
-        labels: dates.map(d => d.slice(5)),
+        labels: refData.dates.map(d => d.slice(5)),
         datasets: allMetals.map((item, i) => {
-          const idx = indexedSeries(item);
-          const { closes } = filterByPeriod(idx.dates, idx.series, cp);
+          const pd = periodIndexed(item, cp);
           return {
             label: item.name,
-            data: closes,
+            data: pd.series,
             borderColor: metalColors[i] || '#fff',
             borderWidth: 1.5,
             pointRadius: 0,
