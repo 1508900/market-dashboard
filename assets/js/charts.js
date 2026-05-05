@@ -365,28 +365,51 @@ function getYield10ySeries(countryCode, period) {
 
   let dates, values;
 
-  if (real && real.dates && real.dates.length > 10) {
+  if (real && real.dates && real.dates.length > 5) {
     dates  = real.dates;
     values = real.values;
+
+    // If monthly data (< 60 points for 3 years), interpolate to daily
+    if (dates.length < 200) {
+      const interp = { dates: [], values: [] };
+      for (let i = 0; i < dates.length - 1; i++) {
+        const d0 = new Date(dates[i]),  v0 = values[i];
+        const d1 = new Date(dates[i+1]),v1 = values[i+1];
+        const days = Math.round((d1 - d0) / 86400000);
+        for (let j = 0; j < days; j++) {
+          const d = new Date(d0);
+          d.setDate(d.getDate() + j);
+          if (d.getDay() === 0 || d.getDay() === 6) continue;
+          interp.dates.push(d.toISOString().slice(0, 10));
+          interp.values.push(+(v0 + (v1 - v0) * j / days).toFixed(3));
+        }
+      }
+      // Add last point
+      interp.dates.push(dates[dates.length - 1]);
+      interp.values.push(values[values.length - 1]);
+      dates  = interp.dates;
+      values = interp.values;
+    }
   } else {
+    // Fallback: generate realistic series from current value
     const y = yields[countryCode];
     const current = y ? y.y10 : 3.0;
-    const volMap = { US:0.008, DE:0.007, FR:0.007, IT:0.010, ES:0.009, UK:0.008, JP:0.004 };
-    const vol = volMap[countryCode] || 0.008;
-    const gen = generateHistoricalSeries(current * 0.95, 756, vol * 3);
+    const volMap = { US:0.025, DE:0.022, FR:0.024, IT:0.030, ES:0.027, UK:0.026, JP:0.012 };
+    const vol = volMap[countryCode] || 0.025;
+    const gen = generateHistoricalSeries(current * 0.75, 1200, vol);
     const scale = current / gen.series[gen.series.length - 1];
     dates  = gen.dates;
-    values = gen.series.map(v => +(v * scale).toFixed(3));
+    values = gen.series.map(v => +Math.max(0.01, v * scale).toFixed(3));
   }
 
-  // Filter by period — handle 3Y explicitly
+  // Filter by period
   const now = new Date();
   const cutoff = new Date(now);
   if      (period === '3M') cutoff.setMonth(cutoff.getMonth() - 3);
   else if (period === '6M') cutoff.setMonth(cutoff.getMonth() - 6);
   else if (period === '1Y') cutoff.setFullYear(cutoff.getFullYear() - 1);
   else if (period === '3Y') cutoff.setFullYear(cutoff.getFullYear() - 3);
-  else                       cutoff.setMonth(cutoff.getMonth() - 3); // default 3M
+  else                       cutoff.setMonth(cutoff.getMonth() - 3);
 
   const pairs = dates.map((d, i) => ({ d, v: values[i] })).filter(p => new Date(p.d) >= cutoff);
   return { dates: pairs.map(p => p.d), closes: pairs.map(p => p.v) };
