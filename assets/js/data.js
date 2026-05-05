@@ -196,12 +196,8 @@ const YIELD_DEFAULTS = {
 };
 
 const CREDIT_DEFAULTS = [
-  { id: 'us_ig', name: 'Investment Grade', region: 'EEUU',   type: 'ig', spread: 98,  change: -2 },
-  { id: 'us_hy', name: 'High Yield',       region: 'EEUU',   type: 'hy', spread: 312, change: +8 },
-  { id: 'eu_ig', name: 'Investment Grade', region: 'Europa', type: 'ig', spread: 123, change: -1 },
-  { id: 'eu_hy', name: 'High Yield',       region: 'Europa', type: 'hy', spread: 368, change: +12 },
-  { id: 'em_ig', name: 'Investment Grade', region: 'EM',     type: 'ig', spread: 178, change: +4 },
-  { id: 'em_hy', name: 'High Yield',       region: 'EM',     type: 'hy', spread: 498, change: +18 },
+  { id: 'us_ig', name: 'Investment Grade', region: 'EEUU', type: 'ig', spread: 98,  change: -2 },
+  { id: 'us_hy', name: 'High Yield',       region: 'EEUU', type: 'hy', spread: 312, change: +8 },
 ];
 
 // ---- MAIN LOAD FUNCTION ----
