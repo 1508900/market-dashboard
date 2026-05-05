@@ -171,32 +171,22 @@ function renderCurveChart(countryCode) {
 // ---- CREDIT CHARTS ----
 function renderCreditCharts() {
   const credit = window.marketData.credit;
-
   const usIg = credit.find(c => c.id === 'us_ig');
   const usHy = credit.find(c => c.id === 'us_hy');
-  const euHy = credit.find(c => c.id === 'eu_hy');
-  const euIg = credit.find(c => c.id === 'eu_ig');
 
-  // Ensure values are in basis points (not fractions)
-  function toSeries(item, fallbackSpread, fallbackVol) {
+  // Ensure values are in basis points
+  function toSeries(item, fallbackSpread) {
     if (item && item.dates && item.dates.length > 5 && item.values && item.values.length > 5) {
-      // Detect if values are in % (< 5) or already pb (> 5)
       const sample = item.values[item.values.length - 1];
       const vals = sample < 5 ? item.values.map(v => +(v * 100).toFixed(1)) : item.values;
       return { dates: item.dates, series: vals };
     }
-    if (item && item.spread) {
-      const gen = generateHistoricalSeries(item.spread, 252, fallbackVol / item.spread);
-      return { dates: gen.dates, series: gen.series };
-    }
-    const gen = generateHistoricalSeries(fallbackSpread, 252, fallbackVol / fallbackSpread);
+    const gen = generateHistoricalSeries(fallbackSpread, 252, 0.015);
     return { dates: gen.dates, series: gen.series };
   }
 
-  const igUS = toSeries(usIg, 98,  6);
-  const hyUS = toSeries(usHy, 312, 15);
-  const hyEU = toSeries(euHy, 368, 18);
-  const igEU = toSeries(euIg, 123,  6);
+  const igUS = toSeries(usIg, 98);
+  const hyUS = toSeries(usHy, 312);
 
   const tooltipPb = { callbacks: { label: ctx => ` ${ctx.parsed.y.toFixed(0)} pb` } };
   const legendOpts = { display: true, labels: { color: '#2A5A72', font: { size: 11 } } };
@@ -208,8 +198,7 @@ function renderCreditCharts() {
     data: {
       labels: igUS.dates.map(d => d.slice(5)),
       datasets: [
-        { label: 'EEUU IG', data: igUS.series, borderColor: '#0085CA', borderWidth: 1.5, pointRadius: 0, tension: 0.3 },
-        { label: 'Europa IG', data: igEU.series.slice(0, igUS.series.length), borderColor: '#a855f7', borderWidth: 1.5, pointRadius: 0, tension: 0.3 },
+        { label: 'EEUU IG', data: igUS.series, borderColor: '#0085CA', backgroundColor: 'rgba(0,133,202,0.06)', borderWidth: 2, fill: true, pointRadius: 0, tension: 0.3 },
       ],
     },
     options: { ...CHART_DEFAULTS, plugins: { ...CHART_DEFAULTS.plugins, legend: legendOpts, tooltip: { ...CHART_DEFAULTS.plugins.tooltip, ...tooltipPb } } },
@@ -222,18 +211,15 @@ function renderCreditCharts() {
     data: {
       labels: hyUS.dates.map(d => d.slice(5)),
       datasets: [
-        { label: 'EEUU HY', data: hyUS.series, borderColor: '#f97316', borderWidth: 1.5, pointRadius: 0, tension: 0.3 },
-        { label: 'Europa HY', data: hyEU.series.slice(0, hyUS.series.length), borderColor: '#eab308', borderWidth: 1.5, pointRadius: 0, tension: 0.3 },
+        { label: 'EEUU HY', data: hyUS.series, borderColor: '#f97316', backgroundColor: 'rgba(249,115,22,0.06)', borderWidth: 2, fill: true, pointRadius: 0, tension: 0.3 },
       ],
     },
     options: { ...CHART_DEFAULTS, plugins: { ...CHART_DEFAULTS.plugins, legend: legendOpts, tooltip: { ...CHART_DEFAULTS.plugins.tooltip, ...tooltipPb } } },
   });
 
-  // Diff HY-IG
+  // Diferencial HY - IG
   const minLen = Math.min(hyUS.series.length, igUS.series.length);
   const diffUS = hyUS.series.slice(0, minLen).map((v, i) => +(v - igUS.series[i]).toFixed(0));
-  const minLenEU = Math.min(hyEU.series.length, igEU.series.length);
-  const diffEU = hyEU.series.slice(0, minLenEU).map((v, i) => +(v - igEU.series[i]).toFixed(0));
 
   destroyChart('diff-chart');
   charts['diff-chart'] = new Chart(document.getElementById('diff-chart').getContext('2d'), {
@@ -241,8 +227,7 @@ function renderCreditCharts() {
     data: {
       labels: igUS.dates.slice(0, minLen).map(d => d.slice(5)),
       datasets: [
-        { label: 'EEUU HY-IG', data: diffUS, borderColor: '#367B35', borderWidth: 1.5, pointRadius: 0, tension: 0.3 },
-        { label: 'Europa HY-IG', data: diffEU, borderColor: '#06b6d4', borderWidth: 1.5, pointRadius: 0, tension: 0.3 },
+        { label: 'HY - IG EEUU', data: diffUS, borderColor: '#367B35', backgroundColor: 'rgba(54,123,53,0.06)', borderWidth: 2, fill: true, pointRadius: 0, tension: 0.3 },
       ],
     },
     options: { ...CHART_DEFAULTS, plugins: { ...CHART_DEFAULTS.plugins, legend: legendOpts, tooltip: { ...CHART_DEFAULTS.plugins.tooltip, ...tooltipPb } } },
