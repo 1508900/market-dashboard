@@ -175,18 +175,31 @@ function renderCreditCharts() {
   const usIg = credit.find(c => c.id === 'us_ig');
   const usHy = credit.find(c => c.id === 'us_hy');
   const euHy = credit.find(c => c.id === 'eu_hy');
+  const euIg = credit.find(c => c.id === 'eu_ig');
 
-  function makeSpreadHistory(item, vol) {
-    if (item && item.dates && item.dates.length > 10 && item.values) {
-      return { dates: item.dates, series: item.values };
+  // Ensure values are in basis points (not fractions)
+  function toSeries(item, fallbackSpread, fallbackVol) {
+    if (item && item.dates && item.dates.length > 5 && item.values && item.values.length > 5) {
+      // Detect if values are in % (< 5) or already pb (> 5)
+      const sample = item.values[item.values.length - 1];
+      const vals = sample < 5 ? item.values.map(v => +(v * 100).toFixed(1)) : item.values;
+      return { dates: item.dates, series: vals };
     }
-    if (item) return generateHistoricalSeries(item.spread || 100, 90, vol / (item.spread || 100));
-    return { dates: [], series: [] };
+    if (item && item.spread) {
+      const gen = generateHistoricalSeries(item.spread, 252, fallbackVol / item.spread);
+      return { dates: gen.dates, series: gen.series };
+    }
+    const gen = generateHistoricalSeries(fallbackSpread, 252, fallbackVol / fallbackSpread);
+    return { dates: gen.dates, series: gen.series };
   }
 
-  const igUS = makeSpreadHistory(usIg, 6);
-  const hyUS = makeSpreadHistory(usHy, 15);
-  const hyEU = makeSpreadHistory(euHy, 18);
+  const igUS = toSeries(usIg, 98,  6);
+  const hyUS = toSeries(usHy, 312, 15);
+  const hyEU = toSeries(euHy, 368, 18);
+  const igEU = toSeries(euIg, 123,  6);
+
+  const tooltipPb = { callbacks: { label: ctx => ` ${ctx.parsed.y.toFixed(0)} pb` } };
+  const legendOpts = { display: true, labels: { color: '#2A5A72', font: { size: 11 } } };
 
   // IG chart
   destroyChart('ig-chart');
@@ -196,9 +209,10 @@ function renderCreditCharts() {
       labels: igUS.dates.map(d => d.slice(5)),
       datasets: [
         { label: 'EEUU IG', data: igUS.series, borderColor: '#0085CA', borderWidth: 1.5, pointRadius: 0, tension: 0.3 },
+        { label: 'Europa IG', data: igEU.series.slice(0, igUS.series.length), borderColor: '#a855f7', borderWidth: 1.5, pointRadius: 0, tension: 0.3 },
       ],
     },
-    options: { ...CHART_DEFAULTS, plugins: { ...CHART_DEFAULTS.plugins, legend: { display: true, labels: { color: '#2A5A72', font: { size: 11 } } } } },
+    options: { ...CHART_DEFAULTS, plugins: { ...CHART_DEFAULTS.plugins, legend: legendOpts, tooltip: { ...CHART_DEFAULTS.plugins.tooltip, ...tooltipPb } } },
   });
 
   // HY chart
@@ -209,29 +223,29 @@ function renderCreditCharts() {
       labels: hyUS.dates.map(d => d.slice(5)),
       datasets: [
         { label: 'EEUU HY', data: hyUS.series, borderColor: '#f97316', borderWidth: 1.5, pointRadius: 0, tension: 0.3 },
-        { label: 'Europa HY', data: hyEU.series, borderColor: '#eab308', borderWidth: 1.5, pointRadius: 0, tension: 0.3 },
+        { label: 'Europa HY', data: hyEU.series.slice(0, hyUS.series.length), borderColor: '#eab308', borderWidth: 1.5, pointRadius: 0, tension: 0.3 },
       ],
     },
-    options: { ...CHART_DEFAULTS, plugins: { ...CHART_DEFAULTS.plugins, legend: { display: true, labels: { color: '#2A5A72', font: { size: 11 } } } } },
+    options: { ...CHART_DEFAULTS, plugins: { ...CHART_DEFAULTS.plugins, legend: legendOpts, tooltip: { ...CHART_DEFAULTS.plugins.tooltip, ...tooltipPb } } },
   });
 
-  // Diff HY-IG chart
-  const euIg = window.marketData.credit.find(c => c.id === 'eu_ig');
-  const euIgSeries = makeSpreadHistory(euIg, 6);
-  const diffUS = hyUS.series.map((v, i) => +(v - (igUS.series[i] || igUS.series[0] || 100)).toFixed(0));
-  const diffEU = hyEU.series.map((v, i) => +(v - (euIgSeries.series[i] || euIgSeries.series[0] || 120)).toFixed(0));
+  // Diff HY-IG
+  const minLen = Math.min(hyUS.series.length, igUS.series.length);
+  const diffUS = hyUS.series.slice(0, minLen).map((v, i) => +(v - igUS.series[i]).toFixed(0));
+  const minLenEU = Math.min(hyEU.series.length, igEU.series.length);
+  const diffEU = hyEU.series.slice(0, minLenEU).map((v, i) => +(v - igEU.series[i]).toFixed(0));
 
   destroyChart('diff-chart');
   charts['diff-chart'] = new Chart(document.getElementById('diff-chart').getContext('2d'), {
     type: 'line',
     data: {
-      labels: igUS.dates.map(d => d.slice(5)),
+      labels: igUS.dates.slice(0, minLen).map(d => d.slice(5)),
       datasets: [
         { label: 'EEUU HY-IG', data: diffUS, borderColor: '#367B35', borderWidth: 1.5, pointRadius: 0, tension: 0.3 },
-        { label: 'Europa HY-IG', data: diffEU.slice(0, diffUS.length), borderColor: '#06b6d4', borderWidth: 1.5, pointRadius: 0, tension: 0.3 },
+        { label: 'Europa HY-IG', data: diffEU, borderColor: '#06b6d4', borderWidth: 1.5, pointRadius: 0, tension: 0.3 },
       ],
     },
-    options: { ...CHART_DEFAULTS, plugins: { ...CHART_DEFAULTS.plugins, legend: { display: true, labels: { color: '#2A5A72', font: { size: 11 } } } } },
+    options: { ...CHART_DEFAULTS, plugins: { ...CHART_DEFAULTS.plugins, legend: legendOpts, tooltip: { ...CHART_DEFAULTS.plugins.tooltip, ...tooltipPb } } },
   });
 }
 
