@@ -151,12 +151,38 @@
       <canvas id="curve-chart"></canvas>
     </div>
   </div>
+
+  <!-- 10Y Historical Evolution -->
+  <div class="curve-panel" style="margin-top:24px">
+    <div class="curve-selector" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <h4 style="margin:0">Bono 10Y — Evolución Histórica (%)</h4>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <div class="country-tabs" id="yield10y-country-tabs" style="margin:0"></div>
+        <div class="period-selector" style="margin:0">
+          <button class="period-btn yield10y-period-btn active" onclick="setYield10yPeriod('3M',this)">3M</button>
+          <button class="period-btn yield10y-period-btn" onclick="setYield10yPeriod('6M',this)">6M</button>
+          <button class="period-btn yield10y-period-btn" onclick="setYield10yPeriod('1Y',this)">1A</button>
+          <button class="period-btn yield10y-period-btn" onclick="setYield10yPeriod('3Y',this)">3A</button>
+        </div>
+      </div>
+    </div>
+    <div class="chart-container" style="height:260px">
+      <canvas id="yield10y-chart"></canvas>
+    </div>
+  </div>
 </section>
 
 <!-- ==================== SECTION: CREDIT ==================== -->
 <section id="section-credit" class="section">
   <div class="section-header">
     <h2>Mercado de Crédito — Spreads</h2>
+    <div class="period-selector">
+      <button class="period-btn credit-period-btn active" onclick="setCreditPeriod('1W',this)">1S</button>
+      <button class="period-btn credit-period-btn" onclick="setCreditPeriod('1M',this)">1M</button>
+      <button class="period-btn credit-period-btn" onclick="setCreditPeriod('3M',this)">3M</button>
+      <button class="period-btn credit-period-btn" onclick="setCreditPeriod('6M',this)">6M</button>
+      <button class="period-btn credit-period-btn" onclick="setCreditPeriod('1Y',this)">1A</button>
+    </div>
   </div>
 
   <div class="credit-top">
