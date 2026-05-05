@@ -369,7 +369,6 @@ function getYield10ySeries(countryCode, period) {
     dates  = real.dates;
     values = real.values;
   } else {
-    // Fallback: generate from current value
     const y = yields[countryCode];
     const current = y ? y.y10 : 3.0;
     const volMap = { US:0.008, DE:0.007, FR:0.007, IT:0.010, ES:0.009, UK:0.008, JP:0.004 };
@@ -380,14 +379,17 @@ function getYield10ySeries(countryCode, period) {
     values = gen.series.map(v => +(v * scale).toFixed(3));
   }
 
-  // Filter by period
-  const filtered = filterByPeriod(dates, values, period === '3Y' ? null : period);
-  if (period === '3Y') {
-    const cutoff = new Date(); cutoff.setFullYear(cutoff.getFullYear() - 3);
-    const pairs = dates.map((d,i) => ({d, v: values[i]})).filter(p => new Date(p.d) >= cutoff);
-    return { dates: pairs.map(p=>p.d), closes: pairs.map(p=>p.v) };
-  }
-  return filtered;
+  // Filter by period — handle 3Y explicitly
+  const now = new Date();
+  const cutoff = new Date(now);
+  if      (period === '3M') cutoff.setMonth(cutoff.getMonth() - 3);
+  else if (period === '6M') cutoff.setMonth(cutoff.getMonth() - 6);
+  else if (period === '1Y') cutoff.setFullYear(cutoff.getFullYear() - 1);
+  else if (period === '3Y') cutoff.setFullYear(cutoff.getFullYear() - 3);
+  else                       cutoff.setMonth(cutoff.getMonth() - 3); // default 3M
+
+  const pairs = dates.map((d, i) => ({ d, v: values[i] })).filter(p => new Date(p.d) >= cutoff);
+  return { dates: pairs.map(p => p.d), closes: pairs.map(p => p.v) };
 }
 
 async function renderYield10yChart(period) {
