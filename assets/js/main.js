@@ -21,6 +21,7 @@ function showSection(name) {
       renderYieldTable();
       renderSlopeChart();
       renderCurveChart(selectedCurveCountry);
+      setTimeout(function(){ if(typeof renderYield10yChart==='function') renderYield10yChart(); }, 100);
       break;
     case 'credit':
       renderCreditCards();
