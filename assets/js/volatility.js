@@ -17,15 +17,25 @@ function renderVolatility() {
   var volData = window.marketData.volatility;
   if (!volData || Object.keys(volData).length === 0) {
     document.getElementById('vol-cards').innerHTML = '<div class="loading"><div class="pulse"></div>Cargando datos de volatilidad...</div>';
+    setTimeout(function(){ renderVolatility(); }, 1500);
+    return;
+  }
+
+  // Check that at least one entry has a real price
+  var hasData = Object.values(volData).some(function(v){ return v && v.price; });
+  if (!hasData) {
+    document.getElementById('vol-cards').innerHTML = '<div class="loading"><div class="pulse"></div>Cargando datos de volatilidad...</div>';
+    setTimeout(function(){ renderVolatility(); }, 1500);
     return;
   }
 
   // Render cards
   var cardsHTML = Object.values(volData).map(function(v) {
-    var zone = getVolZoneLabel(v.zone);
-    var chgCls = v.change >= 0 ? 'neg' : 'pos'; // vol up = bad
-    var ytdLabel = v.ytd != null ? (v.ytd >= 0 ? '+' : '') + v.ytd.toFixed(2) + '%' : '—';
-    var ytdCls = v.ytd != null ? (v.ytd >= 0 ? 'neg' : 'pos') : 'neutral';
+    var zone = getVolZoneLabel(v.zone || 'normal');
+    var price = v.price || 0;
+    var ytd = v.ytd;
+    var ytdLabel = ytd != null ? (ytd >= 0 ? '+' : '') + ytd.toFixed(2) + '%' : '—';
+    var ytdCls = ytd != null ? (ytd >= 0 ? 'neg' : 'pos') : 'neutral';
 
     return '<div class="vol-card" onclick="renderVolChart(\'' + v.id + '\')">' +
       '<div class="vol-header">' +
@@ -35,9 +45,8 @@ function renderVolatility() {
         '</div>' +
         '<span class="vol-zone-badge" style="background:' + zone.bg + ';color:' + zone.color + '">' + zone.label + '</span>' +
       '</div>' +
-      '<div class="vol-price">' + v.price.toFixed(2) + '</div>' +
+      '<div class="vol-price">' + price.toFixed(2) + '</div>' +
       '<div class="vol-desc">' + v.desc + '</div>' +
-
       '<div class="vol-range-bar">' +
         renderVolBar(v) +
       '</div>' +
