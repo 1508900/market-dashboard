@@ -1139,10 +1139,39 @@ const CHART_BASE = {
     },
   },
   scales:{
-    x:{ grid:{color:'rgba(6,45,63,0.07)'}, ticks:{color:'#6b8fa0',font:{size:10,family:'IBM Plex Mono'},maxTicksLimit:8} },
-    y:{ grid:{color:'rgba(6,45,63,0.07)'}, ticks:{color:'#6b8fa0',font:{size:10,family:'IBM Plex Mono'}}, position:'right' },
+    x:{
+      grid:{color:'rgba(6,45,63,0.06)', drawBorder:false},
+      ticks:{color:'#8aa5b5', font:{size:9,family:'IBM Plex Mono'}, maxTicksLimit:8,
+        callback: function(val, idx) {
+          const lbl = this.getLabelForValue(val);
+          if (!lbl) return '';
+          // Format MM-DD to Mon-YY (e.g. "03-15" from "2026-03-15")
+          try {
+            const full = this.chart.data.labels[val] || lbl;
+            const d = new Date(full.length === 5 ? '2026-' + full : full);
+            if (isNaN(d)) return lbl;
+            return d.toLocaleDateString('es-ES',{month:'short',year:'2-digit'}).replace('. ','\'-').replace('.','');
+          } catch(e) { return lbl; }
+        }
+      }
+    },
+    y:{
+      grid:{color:'rgba(6,45,63,0.06)', drawBorder:false},
+      ticks:{color:'#8aa5b5', font:{size:9,family:'IBM Plex Mono'}},
+      position:'right'
+    },
   },
 };
+
+// Helper: format date label as "Mar-26"
+function fmtDateLabel(d) {
+  try {
+    const dt = new Date(d);
+    if (isNaN(dt)) return d;
+    const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    return months[dt.getMonth()] + '-' + String(dt.getFullYear()).slice(2);
+  } catch(e) { return d; }
+}
 
 const charts = {};
 function destroyChart(id) { if(charts[id]){charts[id].destroy();delete charts[id];} }
@@ -1159,8 +1188,17 @@ function makeChart(id, type, labels, datasets, opts) {
 }
 
 function lineDs(label, data, color, fill) {
-  return { label, data, borderColor:color, backgroundColor: fill ? color+'18':'transparent',
-    borderWidth:2, fill:!!fill, tension:0.3, pointRadius:0, pointHoverRadius:4 };
+  return {
+    label, data,
+    borderColor: color,
+    backgroundColor: fill ? color+'12' : 'transparent',
+    borderWidth: 1.5,
+    fill: !!fill,
+    tension: 0.2,
+    pointRadius: 0,
+    pointHoverRadius: 4,
+    pointHoverBackgroundColor: color,
+  };
 }
 
 // ============================================================
@@ -1246,7 +1284,7 @@ function renderEqDetailChart(id, period) {
   if (!ctx) return;
   charts['det-chart'] = new Chart(ctx.getContext('2d'), {
     type:'line',
-    data:{ labels:dates.map(d=>d.slice(5)), datasets:[{
+    data:{ labels:dates.map(fmtDateLabel), datasets:[{
       data:values, borderColor:color, backgroundColor:color+'15',
       borderWidth:2, fill:true, tension:0.3, pointRadius:0, pointHoverRadius:4
     }]},
@@ -1289,7 +1327,7 @@ function selectIndex(id) {
   const { dates, values: closes } = filterPeriod(idx.dates, idx.closes, D.eqPeriod);
   const isPos = closes.length && closes[closes.length-1] >= closes[0];
   const color = isPos ? '#22c55e' : '#ef4444';
-  makeChart('det-chart', 'line', dates.map(d=>d.slice(5)), [lineDs(idx.name, closes, color, true)]);
+  makeChart('det-chart', 'line', dates.map(fmtDateLabel), [lineDs(idx.name, closes, color, true)]);
 
   // Periods summary
   const periods = ['1W','1M','3M','YTD','1Y','2Y','3Y'];
@@ -1359,7 +1397,7 @@ function renderValoracion() {
     chartIds.forEach(id => {
       const idx = D.bolsa[id];
       const { dates, values } = filterPeriod(idx.perDates, idx.perSeries, '1Y');
-      makeChart(`per-${id}`, 'line', dates.map(d=>d.slice(5)), [lineDs(idx.name, values, 'var(--blue2)')], {
+      makeChart(`per-${id}`, 'line', dates.map(fmtDateLabel), [lineDs(idx.name, values, 'var(--blue2)')], {
         plugins:{ ...CHART_BASE.plugins, tooltip:{ ...CHART_BASE.plugins.tooltip, callbacks:{ label:ctx=>` ${ctx.parsed.y.toFixed(1)}x` } } },
         scales:{ ...CHART_BASE.scales, y:{ ...CHART_BASE.scales.y, ticks:{ ...CHART_BASE.scales.y.ticks, callback:v=>v.toFixed(0)+'x' } } },
       });
@@ -1506,8 +1544,8 @@ function renderSlopeCharts(period) {
         const pairs = t.dates.map((d,i)=>({d,v:t.values[i]})).filter(p=>new Date(p.d)>=cut);
         dates = pairs.map(p=>p.d); values = pairs.map(p=>p.v);
       }
-      if (!labels.length) labels = dates.map(d=>d.slice(5));
-      datasets.push({ ...lineDs(`${flags[c]} ${c}`, values, colors[c]), labels: dates.map(d=>d.slice(5)) });
+      if (!labels.length) labels = dates.map(fmtDateLabel);
+      datasets.push({ ...lineDs(`${flags[c]} ${c}`, values, colors[c]), labels: dates.map(fmtDateLabel) });
     });
     if (!datasets.length) return;
     datasets.forEach(ds => delete ds.labels);
@@ -1565,7 +1603,7 @@ function renderYield10y(period) {
   if (!datasets.length) return;
   const labels = datasets[0].labels || [];
   datasets.forEach(ds => delete ds.labels);
-  makeChart('yield10y-chart','line', labels.map(d=>d.slice(5)), datasets, {
+  makeChart('yield10y-chart','line', labels.map(fmtDateLabel), datasets, {
     plugins:{ ...CHART_BASE.plugins, legend:{ display:true, labels:{color:'#2a5a72',font:{size:10,family:'IBM Plex Mono'}} } },
     scales:{ ...CHART_BASE.scales, y:{ ...CHART_BASE.scales.y, ticks:{ ...CHART_BASE.scales.y.ticks, callback:v=>v.toFixed(2)+'%' } } },
   });
@@ -1625,7 +1663,7 @@ function renderCreditoCharts() {
   mainSpreads.filter(id=>D.spreads[id]).forEach(id => {
     const s = D.spreads[id];
     const f = filterPeriod(s.dates, s.values, D.crPeriod);
-    makeChart(`cr-${id}`, 'line', f.dates.map(d=>d.slice(5)),
+    makeChart(`cr-${id}`, 'line', f.dates.map(fmtDateLabel),
       [{ ...lineDs(s.name, f.values, colors[id], true) }], {
       plugins:{ ...CHART_BASE.plugins, tooltip:{ ...CHART_BASE.plugins.tooltip, callbacks:{ label:ctx=>` ${ctx.parsed.y.toFixed(0)} pb` } } },
     });
@@ -1637,7 +1675,7 @@ function renderCreditoCharts() {
     const fUs = filterPeriod(cdxIg.dates, cdxIg.values, D.crPeriod);
     const fEu = filterPeriod(itrxIg.dates, itrxIg.values, D.crPeriod);
     const minLen = Math.min(fUs.dates.length, fEu.dates.length);
-    makeChart('cr-comp','line', fUs.dates.slice(0,minLen).map(d=>d.slice(5)),
+    makeChart('cr-comp','line', fUs.dates.slice(0,minLen).map(fmtDateLabel),
       [lineDs('EEUU CDX IG', fUs.values.slice(0,minLen), '#3b82f6'),
        lineDs('Europa iTraxx IG', fEu.values.slice(0,minLen), '#a78bfa')], {
       plugins:{ ...CHART_BASE.plugins, legend:{ display:true, labels:{color:'#2a5a72',font:{size:10,family:'IBM Plex Mono'}} }, tooltip:{ ...CHART_BASE.plugins.tooltip, callbacks:{ label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(0)} pb` } } },
@@ -1702,7 +1740,7 @@ function renderMMPP() {
       if (!datasets.length) return;
       const labels = datasets[0].labels;
       datasets.forEach(ds => delete ds.labels);
-      makeChart(`mm-${g}`,'line', labels.map(d=>d.slice(5)), datasets, {
+      makeChart(`mm-${g}`,'line', labels.map(fmtDateLabel), datasets, {
         plugins:{ ...CHART_BASE.plugins, legend:{ display:true, labels:{color:'#2a5a72',font:{size:10,family:'IBM Plex Mono'}} } },
         scales:{ ...CHART_BASE.scales, y:{ ...CHART_BASE.scales.y, ticks:{ ...CHART_BASE.scales.y.ticks, callback:v=>v.toFixed(0) } } },
       });
@@ -1917,7 +1955,7 @@ function renderVolatilidad() {
       const f = filterPeriod(vix.dates, vix.closes, '1Y');
       const refN = Array(f.dates.length).fill(refs.vix.normal);
       const refE = Array(f.dates.length).fill(refs.vix.elevated);
-      makeChart('vol-vix','line', f.dates.map(d=>d.slice(5)), [
+      makeChart('vol-vix','line', f.dates.map(fmtDateLabel), [
         lineDs('VIX', f.values, '#3b82f6', true),
         { ...lineDs('Normal (20)', refN, '#3b82f6'), borderWidth:1, borderDash:[4,4] },
         { ...lineDs('Elevado (30)', refE, '#f59e0b'), borderWidth:1, borderDash:[4,4] },
@@ -1927,7 +1965,7 @@ function renderVolatilidad() {
       const f = filterPeriod(v2x.dates, v2x.closes, '1Y');
       const refN = Array(f.dates.length).fill(refs.v2x.normal);
       const refE = Array(f.dates.length).fill(refs.v2x.elevated);
-      makeChart('vol-v2x','line', f.dates.map(d=>d.slice(5)), [
+      makeChart('vol-v2x','line', f.dates.map(fmtDateLabel), [
         lineDs('VSTOXX', f.values, '#ef4444', true),
         { ...lineDs('Normal (22)', refN, '#ef4444'), borderWidth:1, borderDash:[4,4] },
         { ...lineDs('Elevado (32)', refE, '#f59e0b'), borderWidth:1, borderDash:[4,4] },
@@ -1940,7 +1978,7 @@ function renderVolatilidad() {
       const common = Object.keys(mapV).filter(d=>mapS[d]).sort();
       const diff = common.map(d=>+(mapV[d]-mapS[d]).toFixed(2));
       const f = filterPeriod(common, diff, '1Y');
-      makeChart('vol-diff','line', f.dates.map(d=>d.slice(5)), [lineDs('VIX-VSTOXX', f.values, '#2dd4bf', true)]);
+      makeChart('vol-diff','line', f.dates.map(fmtDateLabel), [lineDs('VIX-VSTOXX', f.values, '#2dd4bf', true)]);
     }
   }, 50);
 }
