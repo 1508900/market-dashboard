@@ -9,6 +9,20 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
+<style>
+/* Valuation panel */
+.valuation-panel { background:var(--card,#fff); border-radius:12px; padding:20px 24px; margin-bottom:24px; box-shadow:0 1px 4px rgba(0,0,0,0.06); }
+.val-header { display:flex; align-items:baseline; gap:12px; margin-bottom:16px; }
+.val-header h4 { margin:0; font-size:14px; font-weight:600; color:var(--text1,#062D3F); }
+.val-sub { font-size:11px; color:var(--text3,#7A9BAD); }
+.val-row { display:grid; grid-template-columns:160px 1fr 52px 80px; align-items:center; gap:12px; padding:5px 0; border-bottom:1px solid rgba(0,0,0,0.04); }
+.val-row:last-child { border-bottom:none; }
+.val-name { font-size:12px; color:var(--text2,#2A5A72); font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.val-bar-track { height:6px; background:rgba(0,0,0,0.06); border-radius:3px; overflow:hidden; }
+.val-bar-fill { height:100%; border-radius:3px; transition:width .4s; }
+.val-per { font-size:13px; font-weight:700; text-align:right; font-variant-numeric:tabular-nums; }
+.val-label { font-size:11px; font-weight:500; text-align:center; padding:2px 6px; border-radius:4px; background:rgba(0,0,0,0.05); }
+</style>
 </head>
 <body>
 
@@ -58,8 +72,17 @@
     </div>
   </div>
 
-  <!-- INDEX CARDS GRID -->
+  <!-- INDEX CARDS GRID -->\
   <div class="cards-grid" id="index-cards"></div>
+
+  <!-- VALUATION PANEL -->
+  <div class="valuation-panel" id="valuation-panel">
+    <div class="val-header">
+      <h4>Valoración — PER Forward</h4>
+      <span class="val-sub">Precio / Beneficio estimado próximos 12 meses</span>
+    </div>
+    <div class="val-bars" id="val-bars"></div>
+  </div>
 
   <!-- SELECTED INDEX DETAIL -->
   <div class="detail-panel" id="index-detail">
@@ -207,6 +230,27 @@
       <h4>Diferencial HY - IG EEUU (pb)</h4>
       <div class="chart-container">
         <canvas id="diff-chart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="credit-charts" style="margin-top:8px">
+    <div class="chart-panel">
+      <h4>Europa Investment Grade — iTraxx EUR IG (pb)</h4>
+      <div class="chart-container">
+        <canvas id="eu-ig-chart"></canvas>
+      </div>
+    </div>
+    <div class="chart-panel">
+      <h4>Europa High Yield — iTraxx Xover (pb)</h4>
+      <div class="chart-container">
+        <canvas id="eu-hy-chart"></canvas>
+      </div>
+    </div>
+    <div class="chart-panel">
+      <h4>EEUU vs Europa — IG Comparativo (pb)</h4>
+      <div class="chart-container">
+        <canvas id="us-eu-ig-chart"></canvas>
       </div>
     </div>
   </div>
