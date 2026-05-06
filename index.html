@@ -3,483 +3,1944 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Market Dashboard Pro</title>
+<title>Market Monitor</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/style.css">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-/* Valuation panel */
-.valuation-panel { background:var(--card,#fff); border-radius:12px; padding:20px 24px; margin-bottom:24px; box-shadow:0 1px 4px rgba(0,0,0,0.06); }
-.val-header { display:flex; align-items:baseline; gap:12px; margin-bottom:16px; }
-.val-header h4 { margin:0; font-size:14px; font-weight:600; color:var(--text1,#062D3F); }
-.val-sub { font-size:11px; color:var(--text3,#7A9BAD); }
-.val-row { display:grid; grid-template-columns:160px 1fr 52px 80px; align-items:center; gap:12px; padding:5px 0; border-bottom:1px solid rgba(0,0,0,0.04); }
-.val-row:last-child { border-bottom:none; }
-.val-name { font-size:12px; color:var(--text2,#2A5A72); font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.val-bar-track { height:6px; background:rgba(0,0,0,0.06); border-radius:3px; overflow:hidden; }
-.val-bar-fill { height:100%; border-radius:3px; transition:width .4s; }
-.val-per { font-size:13px; font-weight:700; text-align:right; font-variant-numeric:tabular-nums; }
-.val-label { font-size:11px; font-weight:500; text-align:center; padding:2px 6px; border-radius:4px; background:rgba(0,0,0,0.05); }
+:root {
+  --bg: #0a0e17;
+  --bg2: #111827;
+  --bg3: #1a2235;
+  --bg4: #1e2a3d;
+  --border: rgba(99,130,180,0.12);
+  --border2: rgba(99,130,180,0.22);
+  --text1: #e2e8f4;
+  --text2: #94a3c4;
+  --text3: #4f6080;
+  --blue: #3b82f6;
+  --blue2: #60a5fa;
+  --green: #22c55e;
+  --red: #ef4444;
+  --gold: #f59e0b;
+  --purple: #a78bfa;
+  --teal: #2dd4bf;
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'IBM Plex Sans', sans-serif;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+html { font-size:14px; }
+body { background:var(--bg); color:var(--text1); font-family:var(--sans); min-height:100vh; overflow-x:hidden; }
+
+/* HEADER */
+.header {
+  background:var(--bg2);
+  border-bottom:1px solid var(--border);
+  padding:0 24px;
+  height:52px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  position:sticky;
+  top:0;
+  z-index:100;
+}
+.logo {
+  font-family:var(--mono);
+  font-size:13px;
+  font-weight:600;
+  color:var(--blue2);
+  letter-spacing:0.08em;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.logo::before {
+  content:'▐';
+  color:var(--blue);
+  font-size:16px;
+}
+.header-status {
+  font-family:var(--mono);
+  font-size:11px;
+  color:var(--text3);
+  display:flex;
+  align-items:center;
+  gap:16px;
+}
+.status-dot {
+  width:6px; height:6px;
+  border-radius:50%;
+  background:var(--text3);
+  display:inline-block;
+}
+.status-dot.active { background:var(--green); box-shadow:0 0 6px var(--green); }
+.upload-btn {
+  background:var(--bg3);
+  border:1px solid var(--border2);
+  color:var(--text2);
+  padding:6px 14px;
+  border-radius:6px;
+  cursor:pointer;
+  font-family:var(--mono);
+  font-size:11px;
+  font-weight:500;
+  transition:all .15s;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+.upload-btn:hover { background:var(--bg4); color:var(--text1); border-color:var(--blue); }
+.upload-btn.loaded { border-color:var(--green); color:var(--green); }
+
+/* NAV */
+.nav {
+  background:var(--bg2);
+  border-bottom:1px solid var(--border);
+  padding:0 24px;
+  display:flex;
+  gap:2px;
+  overflow-x:auto;
+}
+.nav::-webkit-scrollbar { height:2px; }
+.nav-btn {
+  background:none;
+  border:none;
+  color:var(--text3);
+  padding:12px 16px;
+  cursor:pointer;
+  font-family:var(--mono);
+  font-size:11px;
+  font-weight:500;
+  letter-spacing:0.05em;
+  border-bottom:2px solid transparent;
+  white-space:nowrap;
+  transition:all .15s;
+  text-transform:uppercase;
+}
+.nav-btn:hover { color:var(--text2); }
+.nav-btn.active { color:var(--blue2); border-bottom-color:var(--blue); }
+
+/* TICKER BAR */
+.ticker-bar {
+  background:var(--bg2);
+  border-bottom:1px solid var(--border);
+  padding:6px 0;
+  overflow:hidden;
+  white-space:nowrap;
+}
+.ticker-inner {
+  display:inline-flex;
+  animation:ticker 60s linear infinite;
+}
+.ticker-inner:hover { animation-play-state:paused; }
+@keyframes ticker { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+.tick-item {
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:0 20px;
+  border-right:1px solid var(--border);
+  font-family:var(--mono);
+  font-size:11px;
+}
+.tick-name { color:var(--text3); font-weight:500; }
+.tick-val { color:var(--text1); }
+.tick-chg.pos { color:var(--green); }
+.tick-chg.neg { color:var(--red); }
+
+/* MAIN */
+.main { padding:24px; max-width:1600px; margin:0 auto; }
+.section { display:none; }
+.section.active { display:block; }
+
+/* SECTION HEADER */
+.sec-title {
+  font-family:var(--mono);
+  font-size:11px;
+  font-weight:600;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+  color:var(--text3);
+  margin-bottom:20px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+.sec-title span { color:var(--blue2); margin-right:8px; }
+
+/* PERIOD BTNS */
+.period-row { display:flex; gap:4px; }
+.pbtn {
+  background:var(--bg3);
+  border:1px solid var(--border);
+  color:var(--text3);
+  padding:4px 10px;
+  border-radius:4px;
+  cursor:pointer;
+  font-family:var(--mono);
+  font-size:10px;
+  font-weight:500;
+  transition:all .15s;
+}
+.pbtn:hover { color:var(--text1); border-color:var(--border2); }
+.pbtn.active { background:rgba(59,130,246,0.15); border-color:var(--blue); color:var(--blue2); }
+
+/* CARDS GRID */
+.cards-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; margin-bottom:24px; }
+
+/* MARKET CARD */
+.mcard {
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:16px;
+  cursor:pointer;
+  transition:all .15s;
+  position:relative;
+  overflow:hidden;
+}
+.mcard::before {
+  content:'';
+  position:absolute;
+  top:0; left:0; right:0;
+  height:2px;
+  background:var(--border2);
+  transition:all .15s;
+}
+.mcard:hover { border-color:var(--border2); background:var(--bg3); }
+.mcard.selected { border-color:var(--blue); background:var(--bg3); }
+.mcard.selected::before { background:var(--blue); }
+.mcard.pos::before { background:var(--green); }
+.mcard.neg::before { background:var(--red); }
+.mc-ticker { font-family:var(--mono); font-size:10px; color:var(--text3); margin-bottom:6px; font-weight:500; }
+.mc-name { font-size:12px; color:var(--text2); margin-bottom:10px; line-height:1.3; }
+.mc-price { font-family:var(--mono); font-size:18px; font-weight:600; color:var(--text1); margin-bottom:4px; }
+.mc-chg { font-family:var(--mono); font-size:11px; font-weight:500; }
+.mc-chg.pos { color:var(--green); }
+.mc-chg.neg { color:var(--red); }
+.mc-chg.neutral { color:var(--text3); }
+.mc-per { font-family:var(--mono); font-size:10px; color:var(--text3); margin-top:6px; }
+
+/* CHART PANEL */
+.chart-panel {
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:20px;
+}
+.cp-title {
+  font-family:var(--mono);
+  font-size:10px;
+  font-weight:600;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  color:var(--text3);
+  margin-bottom:16px;
+}
+.chart-wrap { position:relative; }
+canvas { display:block; }
+
+/* TWO COL LAYOUT */
+.two-col { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+.three-col { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-bottom:16px; }
+.four-col { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:16px; }
+@media(max-width:900px) { .two-col,.three-col,.four-col { grid-template-columns:1fr; } }
+
+/* DETAIL PANEL */
+.detail-panel {
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:20px;
+  margin-bottom:16px;
+  display:grid;
+  grid-template-columns:1fr 300px;
+  gap:24px;
+}
+.detail-metrics { display:flex; gap:20px; flex-wrap:wrap; margin-bottom:16px; }
+.dm { display:flex; flex-direction:column; gap:3px; }
+.dm-label { font-family:var(--mono); font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text3); }
+.dm-val { font-family:var(--mono); font-size:15px; font-weight:600; color:var(--text1); }
+.dm-val.pos { color:var(--green); }
+.dm-val.neg { color:var(--red); }
+
+/* TABLE */
+.data-table { width:100%; border-collapse:collapse; font-family:var(--mono); font-size:11px; }
+.data-table th { color:var(--text3); font-weight:500; padding:8px 12px; text-align:left; border-bottom:1px solid var(--border); letter-spacing:0.06em; text-transform:uppercase; font-size:10px; }
+.data-table td { padding:8px 12px; border-bottom:1px solid var(--border); color:var(--text2); }
+.data-table tr:last-child td { border-bottom:none; }
+.data-table tr:hover td { background:var(--bg3); }
+.td-pos { color:var(--green) !important; }
+.td-neg { color:var(--red) !important; }
+.td-val { color:var(--text1) !important; font-weight:500; }
+
+/* SPREAD CARDS */
+.spread-cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:12px; margin-bottom:20px; }
+.scard {
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:16px;
+}
+.sc-region { font-family:var(--mono); font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text3); margin-bottom:4px; }
+.sc-name { font-size:12px; color:var(--text2); margin-bottom:10px; }
+.sc-spread { font-family:var(--mono); font-size:22px; font-weight:600; color:var(--text1); }
+.sc-spread small { font-size:12px; color:var(--text3); font-weight:400; }
+.sc-chg { font-family:var(--mono); font-size:10px; margin-top:4px; }
+
+/* VOL CARDS */
+.vol-cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:12px; margin-bottom:20px; }
+.vcard {
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:18px;
+}
+.vc-top { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:12px; }
+.vc-name { font-family:var(--mono); font-size:13px; font-weight:600; color:var(--text1); }
+.vc-market { font-size:11px; color:var(--text3); margin-top:2px; }
+.vc-badge { font-family:var(--mono); font-size:10px; font-weight:600; padding:3px 8px; border-radius:4px; }
+.vc-price { font-family:var(--mono); font-size:28px; font-weight:600; color:var(--text1); margin-bottom:6px; }
+.vc-desc { font-size:11px; color:var(--text3); line-height:1.5; margin-bottom:12px; }
+.vc-bar-labels { display:flex; justify-content:space-between; font-family:var(--mono); font-size:9px; color:var(--text3); margin-bottom:4px; }
+.vc-bar-track { height:6px; border-radius:3px; position:relative; overflow:visible; background:transparent; display:flex; }
+.vc-zone { height:100%; }
+.vc-needle { position:absolute; top:-3px; width:2px; height:12px; border-radius:1px; transform:translateX(-50%); }
+
+/* CORR MATRIX */
+.corr-grid { display:grid; gap:8px; margin-bottom:20px; }
+.corr-card {
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:8px;
+  padding:14px 16px;
+  display:grid;
+  grid-template-columns:1fr auto auto auto;
+  align-items:center;
+  gap:12px;
+  cursor:pointer;
+  transition:all .15s;
+}
+.corr-card:hover { border-color:var(--border2); }
+.corr-card.selected { border-color:var(--blue); }
+.corr-pair { font-size:12px; color:var(--text2); }
+.corr-r { font-family:var(--mono); font-size:16px; font-weight:600; }
+.corr-lbl { font-family:var(--mono); font-size:10px; }
+.corr-obs { font-family:var(--mono); font-size:10px; color:var(--text3); }
+
+/* GAUGE */
+.gauge-wrap { text-align:center; position:relative; margin:0 auto; width:220px; }
+.gauge-val { font-family:var(--mono); font-size:32px; font-weight:600; margin-top:-8px; }
+.gauge-lbl { font-family:var(--mono); font-size:11px; font-weight:500; margin-top:4px; }
+.fg-panels { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px; }
+.fg-panel { background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:24px; }
+.fg-title { font-family:var(--mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text3); margin-bottom:20px; }
+.fg-indicators { margin-top:16px; }
+.fg-ind { padding:10px 0; border-bottom:1px solid var(--border); }
+.fg-ind:last-child { border-bottom:none; }
+.fg-ind-top { display:flex; align-items:center; gap:8px; }
+.fg-ind-name { font-size:12px; color:var(--text2); flex:1; }
+.fg-ind-val { font-family:var(--mono); font-size:11px; color:var(--text1); }
+.fg-sig { font-family:var(--mono); font-size:10px; font-weight:600; padding:2px 6px; border-radius:3px; }
+.sig-bull { background:rgba(34,197,94,0.15); color:var(--green); }
+.sig-bear { background:rgba(239,68,68,0.15); color:var(--red); }
+.sig-neut { background:rgba(148,163,196,0.1); color:var(--text3); }
+
+/* SCENARIOS */
+.sc-layout { display:grid; grid-template-columns:1fr 380px; gap:20px; }
+.sc-card {
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:16px 18px;
+  margin-bottom:10px;
+}
+.sc-card-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.sc-card-name { font-size:13px; font-weight:600; color:var(--text1); }
+.sc-card-prob { font-family:var(--mono); font-size:18px; font-weight:600; }
+.sc-slider { width:100%; appearance:none; height:4px; border-radius:2px; background:var(--bg4); outline:none; cursor:pointer; }
+.sc-slider::-webkit-slider-thumb { appearance:none; width:14px; height:14px; border-radius:50%; background:var(--blue); cursor:pointer; }
+.sc-desc { font-size:11px; color:var(--text3); margin-top:8px; line-height:1.5; }
+
+/* UPLOAD OVERLAY */
+.upload-overlay {
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:999;
+  background:rgba(10,14,23,0.85);
+  backdrop-filter:blur(8px);
+  align-items:center;
+  justify-content:center;
+}
+.upload-overlay.open { display:flex; }
+.upload-box {
+  background:var(--bg2);
+  border:1px solid var(--border2);
+  border-radius:16px;
+  padding:40px;
+  width:460px;
+  text-align:center;
+}
+.upload-icon { font-size:48px; margin-bottom:16px; }
+.upload-title { font-family:var(--mono); font-size:14px; font-weight:600; color:var(--text1); margin-bottom:8px; }
+.upload-sub { font-size:12px; color:var(--text3); margin-bottom:24px; line-height:1.6; }
+.drop-zone {
+  border:2px dashed var(--border2);
+  border-radius:10px;
+  padding:28px;
+  cursor:pointer;
+  transition:all .2s;
+  margin-bottom:16px;
+}
+.drop-zone:hover, .drop-zone.over { border-color:var(--blue); background:rgba(59,130,246,0.06); }
+.drop-text { font-family:var(--mono); font-size:12px; color:var(--text2); margin-top:8px; }
+.upload-status { font-family:var(--mono); font-size:11px; margin-top:12px; min-height:20px; }
+.upload-close {
+  background:none;
+  border:1px solid var(--border2);
+  color:var(--text3);
+  padding:8px 20px;
+  border-radius:6px;
+  cursor:pointer;
+  font-family:var(--mono);
+  font-size:11px;
+  margin-top:12px;
+}
+
+/* PER BARS */
+.per-panel { background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:20px; margin-bottom:16px; }
+.per-row { display:grid; grid-template-columns:160px 1fr 56px 70px; align-items:center; gap:12px; padding:7px 0; border-bottom:1px solid var(--border); }
+.per-row:last-child { border-bottom:none; }
+.per-name { font-size:11px; color:var(--text2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.per-track { height:5px; background:var(--bg4); border-radius:3px; overflow:hidden; }
+.per-fill { height:100%; border-radius:3px; transition:width .5s; }
+.per-val { font-family:var(--mono); font-size:12px; font-weight:600; text-align:right; }
+.per-tag { font-family:var(--mono); font-size:9px; font-weight:600; padding:2px 5px; border-radius:3px; text-align:center; }
+
+/* EMPTY STATE */
+.empty {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:60px 20px;
+  gap:12px;
+  color:var(--text3);
+}
+.empty-icon { font-size:36px; opacity:0.4; }
+.empty-text { font-family:var(--mono); font-size:11px; letter-spacing:0.08em; }
+.empty-btn {
+  background:rgba(59,130,246,0.1);
+  border:1px solid rgba(59,130,246,0.3);
+  color:var(--blue2);
+  padding:8px 18px;
+  border-radius:6px;
+  cursor:pointer;
+  font-family:var(--mono);
+  font-size:11px;
+  margin-top:8px;
+  transition:all .15s;
+}
+.empty-btn:hover { background:rgba(59,130,246,0.2); }
+
+/* INFLATION CARDS */
+.infl-cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; margin-bottom:20px; }
+.icard {
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:16px;
+}
+.ic-label { font-family:var(--mono); font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text3); margin-bottom:6px; }
+.ic-val { font-family:var(--mono); font-size:20px; font-weight:600; color:var(--text1); }
+.ic-desc { font-size:11px; color:var(--text3); margin-top:4px; }
 </style>
 </head>
 <body>
 
-<!-- HEADER -->
-<header class="header">
-  <div class="header-left">
-    <div class="logo">MDP</div>
-    <div>
-      <div class="header-title">Market Dashboard Pro</div>
-      <div class="header-sub" id="last-update">Actualizando datos...</div>
+<!-- UPLOAD OVERLAY -->
+<div class="upload-overlay" id="upload-overlay">
+  <div class="upload-box">
+    <div class="upload-icon">📊</div>
+    <div class="upload-title">MARKET MONITOR</div>
+    <div class="upload-sub">Carga el archivo <strong style="color:var(--text1)">DAtos_Claude.xlsx</strong><br>con datos Bloomberg actualizados</div>
+    <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+      <div style="font-size:28px">⬆</div>
+      <div class="drop-text">Arrastra aquí o haz clic para seleccionar</div>
     </div>
-  </div>
-  <nav class="nav">
-    <button class="nav-btn" onclick="showSection('news')">Noticias</button>
-    <button class="nav-btn active" onclick="showSection('equities')">Renta Variable</button>
-    <button class="nav-btn" onclick="showSection('fixed')">Renta Fija</button>
-    <button class="nav-btn" onclick="showSection('credit')">Crédito</button>
-    <button class="nav-btn" onclick="showSection('forex')">Divisas</button>
-    <button class="nav-btn" onclick="showSection('commodities')">Materias Primas</button>
-    <button class="nav-btn" onclick="showSection('correlations')">Correlaciones</button>
-    <button class="nav-btn" onclick="showSection('volatility')">Volatilidad</button>
-    <button class="nav-btn" onclick="showSection('sentiment')">Fear &amp; Greed</button>
-    <button class="nav-btn" onclick="showSection('scenarios')">Escenarios</button>
-  </nav>
-  <button class="refresh-btn" onclick="refreshAll()">↻ Actualizar</button>
-</header>
-
-<!-- TICKER BAR -->
-<div class="ticker-bar">
-  <div class="ticker-inner" id="ticker-content">
-    <span class="ticker-item">Cargando datos de mercado...</span>
+    <input type="file" id="file-input" accept=".xlsx,.xls" style="display:none">
+    <div class="upload-status" id="upload-status"></div>
+    <button class="upload-close" onclick="closeUpload()">Cancelar</button>
   </div>
 </div>
 
+<!-- HEADER -->
+<header class="header">
+  <div class="logo">MARKET MONITOR</div>
+  <div class="header-status">
+    <span class="status-dot" id="status-dot"></span>
+    <span id="status-text" style="font-size:10px">Sin datos</span>
+    <button class="upload-btn" id="upload-btn" onclick="openUpload()">
+      ⬆ Cargar Excel
+    </button>
+  </div>
+</header>
+
+<!-- NAV -->
+<nav class="nav">
+  <button class="nav-btn active" onclick="showSection('bolsa',this)">Bolsa</button>
+  <button class="nav-btn" onclick="showSection('valoracion',this)">Valoración</button>
+  <button class="nav-btn" onclick="showSection('renta-fija',this)">Renta Fija</button>
+  <button class="nav-btn" onclick="showSection('credito',this)">Crédito</button>
+  <button class="nav-btn" onclick="showSection('mmpp',this)">Mat. Primas</button>
+  <button class="nav-btn" onclick="showSection('correlaciones',this)">Correlaciones</button>
+  <button class="nav-btn" onclick="showSection('volatilidad',this)">Volatilidad</button>
+  <button class="nav-btn" onclick="showSection('fg',this)">Fear &amp; Greed</button>
+  <button class="nav-btn" onclick="showSection('escenarios',this)">Escenarios</button>
+</nav>
+
+<!-- TICKER BAR -->
+<div class="ticker-bar"><div class="ticker-inner" id="ticker"></div></div>
+
 <main class="main">
 
-<!-- ==================== SECTION: EQUITIES ==================== -->
-<section id="section-equities" class="section active">
-  <div class="section-header">
-    <h2>Renta Variable Global</h2>
-    <div class="period-selector">
-      <button class="period-btn active" onclick="setEquityPeriod('1W',this)">1S</button>
-      <button class="period-btn" onclick="setEquityPeriod('1M',this)">1M</button>
-      <button class="period-btn" onclick="setEquityPeriod('3M',this)">3M</button>
-      <button class="period-btn" onclick="setEquityPeriod('YTD',this)">YTD</button>
-      <button class="period-btn" onclick="setEquityPeriod('1Y',this)">1A</button>
+<!-- BOLSA -->
+<section class="section active" id="sec-bolsa">
+  <div class="sec-title">
+    <div><span>01</span>Renta Variable</div>
+    <div class="period-row">
+      <button class="pbtn active" onclick="setEqPeriod('1W',this)">1S</button>
+      <button class="pbtn" onclick="setEqPeriod('1M',this)">1M</button>
+      <button class="pbtn" onclick="setEqPeriod('3M',this)">3M</button>
+      <button class="pbtn" onclick="setEqPeriod('YTD',this)">YTD</button>
+      <button class="pbtn" onclick="setEqPeriod('1Y',this)">1A</button>
     </div>
   </div>
-
-  <!-- INDEX CARDS GRID -->\
-  <div class="cards-grid" id="index-cards"></div>
-
-  <!-- VALUATION PANEL -->
-  <div class="valuation-panel" id="valuation-panel">
-    <div class="val-header">
-      <h4>Valoración — PER Forward</h4>
-      <span class="val-sub">Precio / Beneficio estimado próximos 12 meses</span>
-    </div>
-    <div class="val-bars" id="val-bars"></div>
+  <div class="cards-grid" id="eq-cards">
+    <div class="empty"><div class="empty-icon">📈</div><div class="empty-text">Carga el Excel para ver datos</div><button class="empty-btn" onclick="openUpload()">⬆ Cargar Excel</button></div>
   </div>
-
-  <!-- SELECTED INDEX DETAIL -->
-  <div class="detail-panel" id="index-detail">
-    <div class="detail-left">
-      <div class="detail-header">
-        <h3 id="detail-name">S&P 500</h3>
-        <span class="detail-badge" id="detail-exchange">NYSE</span>
-      </div>
-      <div class="detail-metrics">
-        <div class="metric-box">
-          <span class="metric-label">Nivel</span>
-          <span class="metric-val" id="detail-price">—</span>
+  <div id="eq-detail" style="display:none">
+    <div class="detail-panel" id="eq-detail-panel">
+      <div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+          <h2 id="det-name" style="font-size:18px;font-weight:600;color:var(--text1)"></h2>
+          <span id="det-badge" style="font-family:var(--mono);font-size:10px;color:var(--text3);background:var(--bg3);padding:3px 8px;border-radius:4px;border:1px solid var(--border)"></span>
         </div>
-        <div class="metric-box">
-          <span class="metric-label">Var. YTD 2026</span>
-          <span class="metric-val" id="detail-change">—</span>
+        <div class="detail-metrics">
+          <div class="dm"><span class="dm-label">Nivel</span><span class="dm-val" id="det-price">—</span></div>
+          <div class="dm"><span class="dm-label">YTD</span><span class="dm-val" id="det-ytd">—</span></div>
+          <div class="dm"><span class="dm-label">PER Fw</span><span class="dm-val" id="det-per">—</span></div>
+          <div class="dm"><span class="dm-label">Máx 52S</span><span class="dm-val" id="det-high">—</span></div>
+          <div class="dm"><span class="dm-label">Mín 52S</span><span class="dm-val" id="det-low">—</span></div>
         </div>
-        <div class="metric-box">
-          <span class="metric-label">PER Forward</span>
-          <span class="metric-val" id="detail-per">—</span>
-        </div>
-        <div class="metric-box">
-          <span class="metric-label">52W High</span>
-          <span class="metric-val" id="detail-high">—</span>
-        </div>
-        <div class="metric-box">
-          <span class="metric-label">52W Low</span>
-          <span class="metric-val" id="detail-low">—</span>
-        </div>
-        <div class="metric-box">
-          <span class="metric-label">Earning Yield</span>
-          <span class="metric-val" id="detail-yield">—</span>
-        </div>
+        <div class="chart-wrap" style="height:220px"><canvas id="det-chart"></canvas></div>
       </div>
-      <div class="chart-container">
-        <canvas id="index-chart"></canvas>
-      </div>
-    </div>
-    <div class="detail-right">
-      <h4>Top Holdings</h4>
-      <div id="holdings-list" class="holdings-list"></div>
-    </div>
-  </div>
-</section>
-
-<!-- ==================== SECTION: FIXED INCOME ==================== -->
-<section id="section-fixed" class="section">
-  <div class="section-header">
-    <h2>Renta Fija — Curvas de Tipos</h2>
-  </div>
-
-  <div class="yield-grid">
-    <!-- Yield Curves Table -->
-    <div class="yield-table-panel">
-      <h4>Tipos por Plazo (%)</h4>
-      <div class="table-wrap">
-        <table class="data-table" id="yield-table">
-          <thead>
-            <tr>
-              <th>País</th>
-              <th>1Y</th>
-              <th>2Y</th>
-              <th>5Y</th>
-              <th>10Y</th>
-              <th>30Y</th>
-              <th>Pendiente 2-10</th>
-            </tr>
-          </thead>
-          <tbody id="yield-tbody"></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Slope Chart -->
-    <div class="slope-panel">
-      <h4>Pendiente 2-10 años (pb)</h4>
-      <div class="chart-container">
-        <canvas id="slope-chart"></canvas>
-      </div>
-    </div>
-  </div>
-
-  <!-- Yield Curve Shape -->
-  <div class="curve-panel">
-    <div class="curve-selector">
-      <h4>Forma de la Curva</h4>
-      <div class="country-tabs" id="curve-country-tabs"></div>
-    </div>
-    <div class="chart-container" style="height:260px">
-      <canvas id="curve-chart"></canvas>
-    </div>
-  </div>
-
-  <!-- 10Y Historical Evolution -->
-  <div class="curve-panel" style="margin-top:24px">
-    <div class="curve-selector" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
-      <h4 style="margin:0">Bono 10Y — Evolución Histórica (%)</h4>
-      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
-        <div class="country-tabs" id="yield10y-country-tabs" style="margin:0"></div>
-        <div class="period-selector" style="margin:0">
-          <button class="period-btn yield10y-period-btn active" onclick="setYield10yPeriod('3M',this)">3M</button>
-          <button class="period-btn yield10y-period-btn" onclick="setYield10yPeriod('6M',this)">6M</button>
-          <button class="period-btn yield10y-period-btn" onclick="setYield10yPeriod('1Y',this)">1A</button>
-          <button class="period-btn yield10y-period-btn" onclick="setYield10yPeriod('3Y',this)">3A</button>
-        </div>
-      </div>
-    </div>
-    <div class="chart-container" style="height:260px">
-      <canvas id="yield10y-chart"></canvas>
-    </div>
-  </div>
-</section>
-
-<!-- ==================== SECTION: CREDIT ==================== -->
-<section id="section-credit" class="section">
-  <div class="section-header">
-    <h2>Mercado de Crédito — Spreads</h2>
-    <div class="period-selector">
-      <button class="period-btn credit-period-btn active" onclick="setCreditPeriod('1W',this)">1S</button>
-      <button class="period-btn credit-period-btn" onclick="setCreditPeriod('1M',this)">1M</button>
-      <button class="period-btn credit-period-btn" onclick="setCreditPeriod('3M',this)">3M</button>
-      <button class="period-btn credit-period-btn" onclick="setCreditPeriod('6M',this)">6M</button>
-      <button class="period-btn credit-period-btn" onclick="setCreditPeriod('1Y',this)">1A</button>
-    </div>
-  </div>
-
-  <div class="credit-top">
-    <div class="credit-cards" id="credit-cards"></div>
-  </div>
-
-  <div class="credit-charts">
-    <div class="chart-panel">
-      <h4>EEUU Investment Grade — Evolución (pb)</h4>
-      <div class="chart-container">
-        <canvas id="ig-chart"></canvas>
-      </div>
-    </div>
-    <div class="chart-panel">
-      <h4>EEUU High Yield — Evolución (pb)</h4>
-      <div class="chart-container">
-        <canvas id="hy-chart"></canvas>
-      </div>
-    </div>
-    <div class="chart-panel">
-      <h4>Diferencial HY - IG EEUU (pb)</h4>
-      <div class="chart-container">
-        <canvas id="diff-chart"></canvas>
-      </div>
-    </div>
-  </div>
-
-  <div class="credit-charts" style="margin-top:8px">
-    <div class="chart-panel">
-      <h4>Europa Investment Grade — iTraxx EUR IG (pb)</h4>
-      <div class="chart-container">
-        <canvas id="eu-ig-chart"></canvas>
-      </div>
-    </div>
-    <div class="chart-panel">
-      <h4>Europa High Yield — iTraxx Xover (pb)</h4>
-      <div class="chart-container">
-        <canvas id="eu-hy-chart"></canvas>
-      </div>
-    </div>
-    <div class="chart-panel">
-      <h4>EEUU vs Europa — IG Comparativo (pb)</h4>
-      <div class="chart-container">
-        <canvas id="us-eu-ig-chart"></canvas>
+      <div>
+        <div class="cp-title">Rendimiento por período</div>
+        <div id="det-periods" style="display:flex;flex-direction:column;gap:8px;margin-top:8px"></div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ==================== SECTION: FOREX ==================== -->
-<section id="section-forex" class="section">
-  <div class="section-header">
-    <h2>Mercado de Divisas</h2>
-  </div>
-
-  <div class="forex-cards" id="forex-cards"></div>
-
-  <div class="forex-charts">
-    <div class="chart-panel wide">
-      <h4>EUR/USD — Evolución</h4>
-      <div class="chart-container">
-        <canvas id="eurusd-chart"></canvas>
-      </div>
-    </div>
-    <div class="chart-panel wide">
-      <h4>USD Index (DXY) — Evolución</h4>
-      <div class="chart-container">
-        <canvas id="dxy-chart"></canvas>
-      </div>
-    </div>
+<!-- VALORACIÓN -->
+<section class="section" id="sec-valoracion">
+  <div class="sec-title"><span>02</span>Valoración — PER Forward</div>
+  <div id="val-content">
+    <div class="empty"><div class="empty-icon">📊</div><div class="empty-text">Carga el Excel para ver datos</div><button class="empty-btn" onclick="openUpload()">⬆ Cargar Excel</button></div>
   </div>
 </section>
 
-<!-- ==================== SECTION: COMMODITIES ==================== -->
-<section id="section-commodities" class="section">
-  <div class="section-header">
-    <h2>Materias Primas</h2>
-    <div class="period-selector">
-      <button class="period-btn comm-period-btn active" onclick="setCommPeriod('1W',this)">1S</button>
-      <button class="period-btn comm-period-btn" onclick="setCommPeriod('1M',this)">1M</button>
-      <button class="period-btn comm-period-btn" onclick="setCommPeriod('3M',this)">3M</button>
-      <button class="period-btn comm-period-btn" onclick="setCommPeriod('YTD',this)">YTD</button>
-      <button class="period-btn comm-period-btn" onclick="setCommPeriod('1Y',this)">1A</button>
-    </div>
-  </div>
-
-  <div class="commodities-grid">
-    <!-- Energy -->
-    <div class="commodity-group">
-      <div class="group-title">Energía</div>
-      <div id="energy-cards" class="comm-cards"></div>
-    </div>
-    <!-- Precious Metals -->
-    <div class="commodity-group">
-      <div class="group-title">Metales Preciosos</div>
-      <div id="precious-cards" class="comm-cards"></div>
-    </div>
-    <!-- Industrial Metals -->
-    <div class="commodity-group">
-      <div class="group-title">Metales Industriales</div>
-      <div id="industrial-cards" class="comm-cards"></div>
-    </div>
-  </div>
-
-  <div class="commodities-chart-row">
-    <div class="chart-panel">
-      <h4>Energía — Evolución (indexada base 100)</h4>
-      <div class="chart-container">
-        <canvas id="energy-chart"></canvas>
-      </div>
-    </div>
-    <div class="chart-panel">
-      <h4>Metales — Evolución (indexada base 100)</h4>
-      <div class="chart-container">
-        <canvas id="metals-chart"></canvas>
-      </div>
-    </div>
+<!-- RENTA FIJA -->
+<section class="section" id="sec-renta-fija">
+  <div class="sec-title"><span>03</span>Renta Fija — Tipos de Interés</div>
+  <div id="rf-content">
+    <div class="empty"><div class="empty-icon">📉</div><div class="empty-text">Carga el Excel para ver datos</div><button class="empty-btn" onclick="openUpload()">⬆ Cargar Excel</button></div>
   </div>
 </section>
 
-<!-- ==================== SECTION: FEAR & GREED ==================== -->
-<section id="section-sentiment" class="section">
-  <div class="section-header">
-    <h2>Indicadores de Sentimiento</h2>
+<!-- CRÉDITO -->
+<section class="section" id="sec-credito">
+  <div class="sec-title">
+    <div><span>04</span>Crédito — Spreads</div>
+    <div class="period-row">
+      <button class="pbtn active" onclick="setCrPeriod('1W',this)">1S</button>
+      <button class="pbtn" onclick="setCrPeriod('1M',this)">1M</button>
+      <button class="pbtn" onclick="setCrPeriod('3M',this)">3M</button>
+      <button class="pbtn" onclick="setCrPeriod('6M',this)">6M</button>
+      <button class="pbtn" onclick="setCrPeriod('1Y',this)">1A</button>
+    </div>
   </div>
+  <div id="cr-content">
+    <div class="empty"><div class="empty-icon">📋</div><div class="empty-text">Carga el Excel para ver datos</div><button class="empty-btn" onclick="openUpload()">⬆ Cargar Excel</button></div>
+  </div>
+</section>
 
-  <div class="fg-grid">
-    <!-- USA Fear & Greed -->
+<!-- MMPP -->
+<section class="section" id="sec-mmpp">
+  <div class="sec-title">
+    <div><span>05</span>Materias Primas</div>
+    <div class="period-row">
+      <button class="pbtn active" onclick="setMmPeriod('1W',this)">1S</button>
+      <button class="pbtn" onclick="setMmPeriod('1M',this)">1M</button>
+      <button class="pbtn" onclick="setMmPeriod('3M',this)">3M</button>
+      <button class="pbtn" onclick="setMmPeriod('YTD',this)">YTD</button>
+      <button class="pbtn" onclick="setMmPeriod('1Y',this)">1A</button>
+    </div>
+  </div>
+  <div id="mm-content">
+    <div class="empty"><div class="empty-icon">🛢️</div><div class="empty-text">Carga el Excel para ver datos</div><button class="empty-btn" onclick="openUpload()">⬆ Cargar Excel</button></div>
+  </div>
+</section>
+
+<!-- CORRELACIONES -->
+<section class="section" id="sec-correlaciones">
+  <div class="sec-title">
+    <div><span>06</span>Correlaciones</div>
+    <div class="period-row">
+      <button class="pbtn" onclick="setCorrPeriod('1M',this)">1M</button>
+      <button class="pbtn active" onclick="setCorrPeriod('3M',this)">3M</button>
+      <button class="pbtn" onclick="setCorrPeriod('6M',this)">6M</button>
+      <button class="pbtn" onclick="setCorrPeriod('1Y',this)">1A</button>
+    </div>
+  </div>
+  <div id="corr-content">
+    <div class="empty"><div class="empty-icon">🔗</div><div class="empty-text">Carga el Excel para ver datos</div><button class="empty-btn" onclick="openUpload()">⬆ Cargar Excel</button></div>
+  </div>
+</section>
+
+<!-- VOLATILIDAD -->
+<section class="section" id="sec-volatilidad">
+  <div class="sec-title"><span>07</span>Volatilidad</div>
+  <div id="vol-content">
+    <div class="empty"><div class="empty-icon">〰️</div><div class="empty-text">Carga el Excel para ver datos</div><button class="empty-btn" onclick="openUpload()">⬆ Cargar Excel</button></div>
+  </div>
+</section>
+
+<!-- FEAR & GREED -->
+<section class="section" id="sec-fg">
+  <div class="sec-title"><span>08</span>Fear &amp; Greed Index</div>
+  <div class="fg-panels" id="fg-content">
     <div class="fg-panel">
-      <div class="fg-title">Estados Unidos — S&P 500</div>
+      <div class="fg-title">🇺🇸 Estados Unidos — S&amp;P 500</div>
       <div class="gauge-wrap">
-        <canvas id="gauge-us" width="300" height="180"></canvas>
-        <div class="gauge-value" id="fg-us-val">—</div>
-        <div class="gauge-label" id="fg-us-label">—</div>
+        <canvas id="gauge-us" width="220" height="130"></canvas>
+        <div class="gauge-val" id="fg-us-val">—</div>
+        <div class="gauge-lbl" id="fg-us-lbl">—</div>
       </div>
-      <div class="fg-indicators" id="fg-us-indicators"></div>
+      <div class="fg-indicators" id="fg-us-inds"></div>
     </div>
-
-    <!-- EUROPE Fear & Greed -->
     <div class="fg-panel">
-      <div class="fg-title">Europa — Euro Stoxx 50</div>
+      <div class="fg-title">🇪🇺 Europa — Euro Stoxx 50</div>
       <div class="gauge-wrap">
-        <canvas id="gauge-eu" width="300" height="180"></canvas>
-        <div class="gauge-value" id="fg-eu-val">—</div>
-        <div class="gauge-label" id="fg-eu-label">—</div>
+        <canvas id="gauge-eu" width="220" height="130"></canvas>
+        <div class="gauge-val" id="fg-eu-val">—</div>
+        <div class="gauge-lbl" id="fg-eu-lbl">—</div>
       </div>
-      <div class="fg-indicators" id="fg-eu-indicators"></div>
+      <div class="fg-indicators" id="fg-eu-inds"></div>
     </div>
   </div>
-
-  <div class="fg-legend">
-    <span class="leg extreme-fear">0-20 Miedo Extremo</span>
-    <span class="leg fear">20-40 Miedo</span>
-    <span class="leg neutral">40-60 Neutral</span>
-    <span class="leg greed">60-80 Codicia</span>
-    <span class="leg extreme-greed">80-100 Codicia Extrema</span>
+  <div style="display:flex;gap:8px;justify-content:center;margin-top:8px;flex-wrap:wrap;">
+    <span style="font-family:var(--mono);font-size:10px;padding:3px 10px;border-radius:4px;background:rgba(239,68,68,0.15);color:var(--red)">0-20 Miedo Extremo</span>
+    <span style="font-family:var(--mono);font-size:10px;padding:3px 10px;border-radius:4px;background:rgba(249,115,22,0.15);color:#f97316">20-40 Miedo</span>
+    <span style="font-family:var(--mono);font-size:10px;padding:3px 10px;border-radius:4px;background:rgba(234,179,8,0.15);color:var(--gold)">40-60 Neutral</span>
+    <span style="font-family:var(--mono);font-size:10px;padding:3px 10px;border-radius:4px;background:rgba(34,197,94,0.15);color:var(--green)">60-80 Codicia</span>
+    <span style="font-family:var(--mono);font-size:10px;padding:3px 10px;border-radius:4px;background:rgba(34,197,94,0.25);color:#4ade80">80-100 Codicia Extrema</span>
   </div>
 </section>
 
-<!-- ==================== SECTION: VOLATILITY ==================== -->
-<section id="section-volatility" class="section">
-  <div class="section-header">
-    <h2>Indicadores de Volatilidad</h2>
-  </div>
-  <div id="vol-cards" class="vol-cards"></div>
-  <div class="vol-charts-3col">
-    <div class="chart-panel">
-      <h4>VIX — Evolución</h4>
-      <div class="chart-container" style="height:240px">
-        <canvas id="vol-vix-chart"></canvas>
-      </div>
-    </div>
-    <div class="chart-panel">
-      <h4>VSTOXX — Evolución</h4>
-      <div class="chart-container" style="height:240px">
-        <canvas id="vol-vstoxx-chart"></canvas>
-      </div>
-    </div>
-    <div class="chart-panel">
-      <h4>Diferencial VIX - VSTOXX</h4>
-      <div class="chart-container" style="height:240px">
-        <canvas id="vol-diff-chart"></canvas>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ==================== SECTION: CORRELATIONS ==================== -->
-<section id="section-correlations" class="section">
-  <div class="section-header">
-    <h2>Análisis de Correlaciones</h2>
-    <div class="period-selector">
-      <button class="corr-period-btn period-btn" onclick="setCorrPeriod('1M',this)">1M</button>
-      <button class="corr-period-btn period-btn active" onclick="setCorrPeriod('3M',this)">3M</button>
-      <button class="corr-period-btn period-btn" onclick="setCorrPeriod('6M',this)">6M</button>
-      <button class="corr-period-btn period-btn" onclick="setCorrPeriod('1Y',this)">1A</button>
-    </div>
-  </div>
-  <div class="corr-description">
-    Correlación de Pearson calculada sobre retornos diarios. Valor entre -1 (correlación negativa perfecta) y +1 (correlación positiva perfecta). Clic en cada par para ver el gráfico de dispersión.
-  </div>
-  <div id="corr-matrix" class="corr-matrix"></div>
-  <div class="corr-scatter-panel">
-    <h4 id="scatter-title">Selecciona un par para ver el gráfico de dispersión</h4>
-    <div class="chart-container" style="height:340px">
-      <canvas id="scatter-chart"></canvas>
-    </div>
-  </div>
-</section>
-
-<!-- ==================== SECTION: SCENARIOS ==================== -->
-<section id="section-scenarios" class="section">
-  <div class="section-header">
-    <h2>Escenarios Macro y Asset Allocation</h2>
-    <button class="period-btn active" onclick="resetScenarios()">↺ Reset automático</button>
-  </div>
-  <div class="sc-description">
-    Las probabilidades se calculan automáticamente según los indicadores de mercado (curva de tipos, VIX, spreads de crédito, momentum de bolsa). Puedes ajustar manualmente los sliders para ver el asset allocation resultante.
-  </div>
-
+<!-- ESCENARIOS -->
+<section class="section" id="sec-escenarios">
+  <div class="sec-title"><span>09</span>Escenarios Macro</div>
   <div class="sc-layout">
-    <!-- LEFT: Scenario sliders -->
-    <div class="sc-left">
-      <div id="sc-cards" class="sc-cards"></div>
-      <div id="sc-dominant" class="sc-dominant"></div>
-    </div>
-
-    <!-- RIGHT: AA Result -->
-    <div class="sc-right">
-      <div class="sc-aa-panel">
-        <h4>Asset Allocation Resultante</h4>
-        <div class="sc-donut-wrap">
-          <canvas id="sc-donut-chart" height="220"></canvas>
-        </div>
-        <div id="sc-aa-metrics" class="sc-aa-metrics"></div>
+    <div id="sc-cards"></div>
+    <div>
+      <div class="chart-panel">
+        <div class="cp-title">Asset Allocation Resultante</div>
+        <div class="chart-wrap" style="height:220px"><canvas id="sc-donut"></canvas></div>
+        <div id="sc-aa" style="margin-top:16px;display:flex;flex-direction:column;gap:6px"></div>
       </div>
-      <div id="sc-vs-neutral" class="sc-vs-neutral"></div>
-      <div id="sc-bias" class="sc-bias"></div>
     </div>
   </div>
-</section>
-
-<!-- ==================== SECTION: NEWS ==================== -->
-<section id="section-news" class="section">
-  <div class="section-header">
-    <h2>Noticias de Mercado</h2>
-    <div class="news-filter">
-      <button class="filter-btn active" onclick="filterNews('all',this)">Todas</button>
-      <button class="filter-btn" onclick="filterNews('macro',this)">Macro</button>
-      <button class="filter-btn" onclick="filterNews('equities',this)">Bolsa</button>
-      <button class="filter-btn" onclick="filterNews('rates',this)">Renta Fija</button>
-      <button class="filter-btn" onclick="filterNews('credit',this)">Crédito</button>
-      <button class="filter-btn" onclick="filterNews('commodities',this)">Mat. Primas</button>
-    </div>
-  </div>
-  <div id="news-grid" class="news-grid"></div>
 </section>
 
 </main>
 
-<!-- FOOTER -->
-<footer class="footer">
-  <span>Market Dashboard Pro · Datos con retraso 15-20 min · Fuentes: Yahoo Finance, FRED, ECB · No constituye asesoramiento de inversión</span>
-</footer>
+<script>
+// ============================================================
+// DATA STORE
+// ============================================================
+const D = {
+  bolsa: {},      // id → { name, ticker, dates[], closes[], per? }
+  valuation: {},  // id → { name, dates[], pers[] }
+  tipos: {},      // ticker → { name, country, tenor, dates[], values[] }
+  spreads: {},    // id → { name, dates[], values[] }
+  mmpp: {},       // id → { name, unit, group, dates[], closes[] }
+  inflation: {},  // id → { name, dates[], values[] }
+  loaded: false,
+  eqPeriod: '1W',
+  crPeriod: '1W',
+  mmPeriod: '1W',
+  corrPeriod: '3M',
+  selIndex: null,
+};
 
-<script src="assets/js/data.js"></script>
-<script src="assets/js/charts.js"></script>
-<script src="assets/js/sentiment.js"></script>
-<script src="assets/js/scenarios.js"></script>
-<script src="assets/js/volatility.js"></script>
-<script src="assets/js/correlations.js"></script>
-<script src="assets/js/news.js"></script>
-<script src="assets/js/main.js"></script>
-<script src="assets/js/bbg-import.js"></script>
+// ============================================================
+// BBG TICKER MAPS
+// ============================================================
+const EQ_MAP = {
+  'NDX Index':       { id:'ndx',    name:'Nasdaq 100',    region:'EEUU',   exchange:'NASDAQ' },
+  'SPX Index':       { id:'spx',    name:'S&P 500',       region:'EEUU',   exchange:'NYSE'   },
+  'SX5E Index':      { id:'sx5e',   name:'Euro Stoxx 50', region:'Europa', exchange:'EUREX'  },
+  'MXWD Index':      { id:'mxwd',   name:'MSCI World',    region:'Global', exchange:'MSCI'   },
+  'NKY Index':       { id:'nky',    name:'Nikkei 225',    region:'Japón',  exchange:'TSE'    },
+  'UBXXMAG7 Index':  { id:'mag7',   name:'Mag 7',         region:'EEUU',   exchange:'NASDAQ' },
+  'RTY Index':       { id:'rty',    name:'Russell 2000',  region:'EEUU',   exchange:'NYSE'   },
+  'MXEF Index':      { id:'mxef',   name:'MSCI EM',       region:'EM',     exchange:'MSCI'   },
+  'MXLA Index':      { id:'mxla',   name:'MSCI LatAm',    region:'LatAm',  exchange:'MSCI'   },
+  'MXCN Index':      { id:'mxcn',   name:'MSCI China',    region:'China',  exchange:'MSCI'   },
+  'VIX Index':       { id:'vix',    name:'VIX',           region:'EEUU',   exchange:'CBOE',  isVol:true },
+  'V2X Index':       { id:'v2x',    name:'VSTOXX',        region:'Europa', exchange:'EUREX', isVol:true },
+};
+
+const FX_MAP = {
+  'EURUSD BGN Curncy': { id:'eurusd', name:'EUR/USD' },
+  'DXY Curncy':        { id:'dxy',    name:'DXY' },
+  'EURJPY BGN Curncy': { id:'eurjpy', name:'EUR/JPY' },
+  'USDJPY BGN Curncy': { id:'usdjpy', name:'USD/JPY' },
+};
+
+const MMPP_MAP = {
+  'XAU BGN Curncy':      { id:'gold',   name:'Oro',      unit:'USD/oz', group:'metales' },
+  'XAG BGN Curncy':      { id:'silver', name:'Plata',    unit:'USD/oz', group:'metales' },
+  'CO1 Comdty':          { id:'brent',  name:'Brent',    unit:'USD/b',  group:'energia' },
+  'CL1 Comdty':          { id:'wti',    name:'WTI',      unit:'USD/b',  group:'energia' },
+  'NG1 COMB Comdty':     { id:'natgas', name:'Gas Nat.', unit:'USD',    group:'energia' },
+  'TTFG1MON SPEC Index': { id:'ttf',    name:'TTF Gas',  unit:'€/MWh',  group:'energia' },
+};
+
+const TIPOS_MAP = {
+  'USGG2YR Index':  { id:'us2y',  country:'US', tenor:'2Y',  name:'US 2Y'  },
+  'USGG5YR Index':  { id:'us5y',  country:'US', tenor:'5Y',  name:'US 5Y'  },
+  'USGG10YR Index': { id:'us10y', country:'US', tenor:'10Y', name:'US 10Y' },
+  'USGG30YR Index': { id:'us30y', country:'US', tenor:'30Y', name:'US 30Y' },
+  'GDBR2 Index':    { id:'de2y',  country:'DE', tenor:'2Y',  name:'DE 2Y'  },
+  'GDBR5 Index':    { id:'de5y',  country:'DE', tenor:'5Y',  name:'DE 5Y'  },
+  'GDBR10 Index':   { id:'de10y', country:'DE', tenor:'10Y', name:'DE 10Y' },
+  'GDBR30 Index':   { id:'de30y', country:'DE', tenor:'30Y', name:'DE 30Y' },
+  'GJGB2 Index':    { id:'jp2y',  country:'JP', tenor:'2Y',  name:'JP 2Y'  },
+  'GJGB10 Index':   { id:'jp10y', country:'JP', tenor:'10Y', name:'JP 10Y' },
+  'GJGB30 Index':   { id:'jp30y', country:'JP', tenor:'30Y', name:'JP 30Y' },
+  'GUKG2 Index':    { id:'uk2y',  country:'UK', tenor:'2Y',  name:'UK 2Y'  },
+  'GUKG10 Index':   { id:'uk10y', country:'UK', tenor:'10Y', name:'UK 10Y' },
+  'GUKG30 Index':   { id:'uk30y', country:'UK', tenor:'30Y', name:'UK 30Y' },
+};
+
+const SPREAD_MAP = {
+  'CDX IG CDSI GEN 5Y Corp':       { id:'cdx_ig',     name:'CDX IG 5Y',      region:'EEUU',   type:'ig' },
+  'CDX HY CDSI GEN 5Y SPRD Corp':  { id:'cdx_hy',     name:'CDX HY 5Y',      region:'EEUU',   type:'hy' },
+  'ITRX EUR CDSI GEN 5Y Corp':     { id:'itrx_ig',    name:'iTraxx EUR IG 5Y',region:'Europa', type:'ig' },
+  'ITRX XOVER CDSI GEN 5Y Corp':   { id:'itrx_xover', name:'iTraxx Xover 5Y', region:'Europa', type:'hy' },
+  'SNRFIN CDSI GEN 5Y Corp':       { id:'snrfin',     name:'Sr Financial 5Y', region:'Europa', type:'fin' },
+  'SUBFIN CDSI GEN 5Y Corp':       { id:'subfin',     name:'Sub Financial 5Y',region:'Europa', type:'fin' },
+};
+
+const PER_MAP = {
+  'NDX Index':'ndx','SPX Index':'spx','SX5E Index':'sx5e','MXWD Index':'mxwd',
+  'NKY Index':'nky','UBXXMAG7 Index':'mag7','RTY Index':'rty','MXEF Index':'mxef',
+  'MXLA Index':'mxla','MXCN Index':'mxcn',
+};
+
+const INFL_MAP = {
+  'USGGBE02 Index':        { id:'us_bei2',  name:'US BEI 2Y',    region:'EEUU'   },
+  'USGGBE05 Index':        { id:'us_bei5',  name:'US BEI 5Y',    region:'EEUU'   },
+  'USGGBE10 Index':        { id:'us_bei10', name:'US BEI 10Y',   region:'EEUU'   },
+  'FWISUS55 Index':        { id:'us_5y5y',  name:'US 5Y5Y Fwd',  region:'EEUU'   },
+  'EUSA0505 BGN Curncy':   { id:'eu_5y5y',  name:'EU 5Y5Y Fwd',  region:'Europa' },
+  'EUSA0101 BGN Curncy':   { id:'eu_1y1y',  name:'EU 1Y1Y Fwd',  region:'Europa' },
+};
+
+// ============================================================
+// EXCEL PARSER
+// ============================================================
+function parseDate(cell) {
+  if (!cell) return null;
+  if (cell instanceof Date) {
+    if (isNaN(cell.getTime()) || cell.getFullYear() < 1990) return null;
+    return cell.toISOString().slice(0,10);
+  }
+  if (typeof cell === 'string') {
+    const m = cell.match(/\d{4}-\d{2}-\d{2}/);
+    if (m) return m[0];
+  }
+  return null;
+}
+
+function parseSheet(sheet, mapObj) {
+  const rows = XLSX.utils.sheet_to_json(sheet, { header:1, defval:null, raw:false, cellDates:true });
+  if (!rows || rows.length < 3) return {};
+
+  // Find ticker row
+  let tickerRow = null, tickerIdx = -1;
+  for (let i = 0; i < Math.min(rows.length, 8); i++) {
+    if (rows[i] && rows[i].some(c => typeof c === 'string' && mapObj[c.trim()])) {
+      tickerRow = rows[i]; tickerIdx = i; break;
+    }
+  }
+  if (!tickerRow) return {};
+
+  // Map col → ticker info
+  const colMap = {};
+  tickerRow.forEach((cell, col) => {
+    if (typeof cell === 'string' && mapObj[cell.trim()]) colMap[col] = cell.trim();
+  });
+
+  const result = {};
+  Object.values(colMap).forEach(t => { result[t] = { dates:[], values:[] }; });
+
+  for (let i = tickerIdx + 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row) continue;
+    Object.entries(colMap).forEach(([colStr, ticker]) => {
+      const col = +colStr;
+      const d = parseDate(row[col]);
+      const v = row[col + 1];
+      if (!d) return;
+      const num = typeof v === 'number' ? v : (typeof v === 'string' ? parseFloat(v) : null);
+      if (num === null || isNaN(num)) return;
+      result[ticker].dates.push(d);
+      result[ticker].values.push(+num.toFixed(4));
+    });
+  }
+
+  // Remove empty
+  Object.keys(result).forEach(k => { if (!result[k].dates.length) delete result[k]; });
+  return result;
+}
+
+function loadExcel(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const wb = XLSX.read(e.target.result, { type:'array', cellDates:true });
+
+        // BOLSA
+        const bolsaSheet = wb.Sheets['Bolsa valores'];
+        if (bolsaSheet) {
+          const s = parseSheet(bolsaSheet, EQ_MAP);
+          Object.entries(s).forEach(([ticker, data]) => {
+            const meta = EQ_MAP[ticker];
+            if (!meta) return;
+            const last = data.values[data.values.length-1];
+            // YTD
+            const yr = new Date().getFullYear() + '-01-01';
+            const yi = data.dates.findIndex(d => d >= yr);
+            const ytd = yi >= 0 && data.values[yi] ? +((last - data.values[yi]) / Math.abs(data.values[yi]) * 100).toFixed(2) : null;
+            const prev = data.values.length >= 2 ? data.values[data.values.length-2] : last;
+            D.bolsa[meta.id] = {
+              ...meta, ticker,
+              dates: data.dates, closes: data.values,
+              price: last,
+              chg1d: prev ? +((last-prev)/prev*100).toFixed(2) : 0,
+              ytd,
+            };
+          });
+        }
+
+        // DIVISAS (merge into bolsa for FX section, used in correlations)
+        const fxSheet = wb.Sheets['Div. valores'];
+        if (fxSheet) {
+          const s = parseSheet(fxSheet, FX_MAP);
+          Object.entries(s).forEach(([ticker, data]) => {
+            const meta = FX_MAP[ticker];
+            const last = data.values[data.values.length-1];
+            const yr = new Date().getFullYear() + '-01-01';
+            const yi = data.dates.findIndex(d => d >= yr);
+            const ytd = yi >= 0 && data.values[yi] ? +((last - data.values[yi]) / Math.abs(data.values[yi]) * 100).toFixed(2) : null;
+            D.bolsa[meta.id] = { ...meta, ticker, dates:data.dates, closes:data.values, price:last, chg1d:0, ytd, isFx:true };
+          });
+        }
+
+        // MMPP
+        const mmSheet = wb.Sheets['MMPP valores'];
+        if (mmSheet) {
+          const s = parseSheet(mmSheet, MMPP_MAP);
+          Object.entries(s).forEach(([ticker, data]) => {
+            const meta = MMPP_MAP[ticker];
+            const last = data.values[data.values.length-1];
+            const yr = new Date().getFullYear() + '-01-01';
+            const yi = data.dates.findIndex(d => d >= yr);
+            const ytd = yi >= 0 && data.values[yi] ? +((last - data.values[yi]) / Math.abs(data.values[yi]) * 100).toFixed(2) : null;
+            const prev = data.values.length >= 2 ? data.values[data.values.length-2] : last;
+            D.mmpp[meta.id] = { ...meta, ticker, dates:data.dates, closes:data.values, price:last, chg1d: prev ? +((last-prev)/prev*100).toFixed(2):0, ytd };
+          });
+        }
+
+        // TIPOS
+        const tiposSheet = wb.Sheets['tipos valores'];
+        if (tiposSheet) {
+          const s = parseSheet(tiposSheet, TIPOS_MAP);
+          Object.entries(s).forEach(([ticker, data]) => {
+            const meta = TIPOS_MAP[ticker];
+            D.tipos[meta.id] = { ...meta, dates:data.dates, values:data.values, last:data.values[data.values.length-1] };
+          });
+        }
+
+        // SPREADS
+        const spSheet = wb.Sheets['spread valores'];
+        if (spSheet) {
+          const s = parseSheet(spSheet, SPREAD_MAP);
+          Object.entries(s).forEach(([ticker, data]) => {
+            const meta = SPREAD_MAP[ticker];
+            D.spreads[meta.id] = { ...meta, dates:data.dates, values:data.values, last:data.values[data.values.length-1] };
+          });
+        }
+
+        // VALORACIÓN
+        const valSheet = wb.Sheets['valoración valores'];
+        if (valSheet) {
+          const s = parseSheet(valSheet, PER_MAP);
+          Object.entries(s).forEach(([ticker, data]) => {
+            const id = PER_MAP[ticker];
+            if (D.bolsa[id]) {
+              D.bolsa[id].per = data.values[data.values.length-1];
+              D.bolsa[id].perDates = data.dates;
+              D.bolsa[id].perSeries = data.values;
+            }
+          });
+        }
+
+        // INFLACIÓN
+        const inflSheet = wb.Sheets['inflación valores'];
+        if (inflSheet) {
+          const s = parseSheet(inflSheet, INFL_MAP);
+          Object.entries(s).forEach(([ticker, data]) => {
+            const meta = INFL_MAP[ticker];
+            D.inflation[meta.id] = { ...meta, dates:data.dates, values:data.values, last:data.values[data.values.length-1] };
+          });
+        }
+
+        D.loaded = true;
+        resolve();
+      } catch(err) { reject(err); }
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+// ============================================================
+// UTILITIES
+// ============================================================
+function fmt(v, dec) {
+  if (v == null || isNaN(v)) return '—';
+  dec = dec ?? (v >= 10000 ? 0 : v >= 1000 ? 1 : v >= 10 ? 2 : 4);
+  return v.toLocaleString('es-ES', { minimumFractionDigits:dec, maximumFractionDigits:dec });
+}
+
+function fmtPct(v) {
+  if (v == null || isNaN(v)) return '—';
+  return (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
+}
+
+function cc(v) { return v > 0 ? 'pos' : v < 0 ? 'neg' : 'neutral'; }
+
+function filterPeriod(dates, values, period) {
+  if (!dates || !values) return { dates:[], values:[] };
+  const now = new Date(), cut = new Date(now);
+  if      (period==='1W')  cut.setDate(cut.getDate()-7);
+  else if (period==='1M')  cut.setMonth(cut.getMonth()-1);
+  else if (period==='3M')  cut.setMonth(cut.getMonth()-3);
+  else if (period==='6M')  cut.setMonth(cut.getMonth()-6);
+  else if (period==='YTD') { cut.setMonth(0); cut.setDate(1); }
+  else if (period==='1Y')  cut.setFullYear(cut.getFullYear()-1);
+  else if (period==='3Y')  cut.setFullYear(cut.getFullYear()-3);
+  const pairs = dates.map((d,i)=>({d,v:values[i]})).filter(p=>new Date(p.d)>=cut && p.v!=null);
+  return { dates:pairs.map(p=>p.d), values:pairs.map(p=>p.v) };
+}
+
+function periodPerf(dates, values, period) {
+  const f = filterPeriod(dates, values, period);
+  if (f.values.length < 2) return null;
+  const first = f.values[0], last = f.values[f.values.length-1];
+  return +((last-first)/Math.abs(first)*100).toFixed(2);
+}
+
+function pearson(x, y) {
+  const n = Math.min(x.length, y.length);
+  if (n < 5) return null;
+  const xs = x.slice(-n), ys = y.slice(-n);
+  const mx = xs.reduce((a,b)=>a+b)/n, my = ys.reduce((a,b)=>a+b)/n;
+  let num=0, dx2=0, dy2=0;
+  for (let i=0;i<n;i++) { const ex=xs[i]-mx, ey=ys[i]-my; num+=ex*ey; dx2+=ex*ex; dy2+=ey*ey; }
+  if (!dx2||!dy2) return 0;
+  return +(num/Math.sqrt(dx2*dy2)).toFixed(3);
+}
+
+function dailyRet(arr) {
+  const r=[];
+  for (let i=1;i<arr.length;i++) if (arr[i-1]&&arr[i]) r.push((arr[i]-arr[i-1])/arr[i-1]*100);
+  return r;
+}
+
+const CHART_BASE = {
+  responsive:true, maintainAspectRatio:false,
+  animation:{duration:300},
+  plugins:{
+    legend:{display:false},
+    tooltip:{
+      backgroundColor:'#1a2235', borderColor:'rgba(99,130,180,0.3)', borderWidth:1,
+      titleColor:'#94a3c4', bodyColor:'#e2e8f4', padding:10,
+    },
+  },
+  scales:{
+    x:{ grid:{color:'rgba(99,130,180,0.06)'}, ticks:{color:'#4f6080',font:{size:10,family:'IBM Plex Mono'},maxTicksLimit:8} },
+    y:{ grid:{color:'rgba(99,130,180,0.06)'}, ticks:{color:'#4f6080',font:{size:10,family:'IBM Plex Mono'}}, position:'right' },
+  },
+};
+
+const charts = {};
+function destroyChart(id) { if(charts[id]){charts[id].destroy();delete charts[id];} }
+
+function makeChart(id, type, labels, datasets, opts) {
+  destroyChart(id);
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  charts[id] = new Chart(ctx.getContext('2d'), {
+    type, data:{labels,datasets},
+    options:{ ...CHART_BASE, ...(opts||{}) },
+  });
+  return charts[id];
+}
+
+function lineDs(label, data, color, fill) {
+  return { label, data, borderColor:color, backgroundColor: fill ? color+'18':'transparent',
+    borderWidth:2, fill:!!fill, tension:0.3, pointRadius:0, pointHoverRadius:4 };
+}
+
+// ============================================================
+// TICKER BAR
+// ============================================================
+function buildTicker() {
+  const items = [];
+  Object.values(D.bolsa).filter(x=>!x.isFx&&!x.isVol&&x.price).forEach(x=>{
+    const cls = x.ytd>=0?'pos':'neg';
+    items.push(`<div class="tick-item"><span class="tick-name">${x.id.toUpperCase()}</span><span class="tick-val">${fmt(x.price)}</span><span class="tick-chg ${cls}">${fmtPct(x.ytd)}</span></div>`);
+  });
+  Object.values(D.mmpp).filter(x=>x.price).slice(0,6).forEach(x=>{
+    const cls = x.ytd>=0?'pos':'neg';
+    items.push(`<div class="tick-item"><span class="tick-name">${x.name}</span><span class="tick-val">${fmt(x.price)}</span><span class="tick-chg ${cls}">${fmtPct(x.ytd)}</span></div>`);
+  });
+  const full = [...items,...items].join('');
+  document.getElementById('ticker').innerHTML = full;
+}
+
+// ============================================================
+// SECTION: BOLSA
+// ============================================================
+function renderBolsa() {
+  const idxList = Object.values(D.bolsa).filter(x=>!x.isFx&&!x.isVol);
+  if (!idxList.length) return;
+
+  // Cards
+  const container = document.getElementById('eq-cards');
+  container.innerHTML = idxList.map(idx => {
+    const perf = periodPerf(idx.dates, idx.closes, D.eqPeriod) ?? idx.ytd;
+    const cls = perf>=0?'pos':'neg';
+    const isSelected = D.selIndex === idx.id;
+    return `<div class="mcard ${cls}${isSelected?' selected':''}" onclick="selectIndex('${idx.id}')">
+      <div class="mc-ticker">${idx.region} · ${idx.exchange}</div>
+      <div class="mc-name">${idx.name}</div>
+      <div class="mc-price">${fmt(idx.price)}</div>
+      <div class="mc-chg ${cc(perf)}">${fmtPct(perf)} <span style="color:var(--text3);font-size:9px">(${D.eqPeriod})</span></div>
+      ${idx.per ? `<div class="mc-per">PER: ${idx.per.toFixed(1)}x</div>` : ''}
+    </div>`;
+  }).join('');
+
+  // Auto-select first if none
+  if (!D.selIndex && idxList.length) selectIndex(idxList[0].id);
+}
+
+function selectIndex(id) {
+  D.selIndex = id;
+  const idx = D.bolsa[id];
+  if (!idx) return;
+
+  // Highlight card
+  document.querySelectorAll('#eq-cards .mcard').forEach(c => {
+    c.classList.toggle('selected', c.getAttribute('onclick')?.includes(`'${id}'`));
+  });
+
+  document.getElementById('eq-detail').style.display = 'block';
+  document.getElementById('det-name').textContent = idx.name;
+  document.getElementById('det-badge').textContent = idx.exchange;
+  document.getElementById('det-price').textContent = fmt(idx.price);
+
+  const ytdEl = document.getElementById('det-ytd');
+  ytdEl.textContent = fmtPct(idx.ytd);
+  ytdEl.className = 'dm-val ' + cc(idx.ytd);
+
+  document.getElementById('det-per').textContent = idx.per ? idx.per.toFixed(1)+'x' : '—';
+
+  // 52W high/low
+  const { values } = filterPeriod(idx.dates, idx.closes, '1Y');
+  document.getElementById('det-high').textContent = values.length ? fmt(Math.max(...values)) : '—';
+  document.getElementById('det-low').textContent  = values.length ? fmt(Math.min(...values)) : '—';
+
+  // Chart
+  const { dates, values: closes } = filterPeriod(idx.dates, idx.closes, D.eqPeriod);
+  const isPos = closes.length && closes[closes.length-1] >= closes[0];
+  const color = isPos ? '#22c55e' : '#ef4444';
+  makeChart('det-chart', 'line', dates.map(d=>d.slice(5)), [lineDs(idx.name, closes, color, true)]);
+
+  // Periods summary
+  const periods = ['1W','1M','3M','YTD','1Y'];
+  const periodsEl = document.getElementById('det-periods');
+  periodsEl.innerHTML = periods.map(p => {
+    const v = periodPerf(idx.dates, idx.closes, p);
+    return `<div style="display:flex;justify-content:space-between;padding:6px 10px;background:var(--bg3);border-radius:6px;font-family:var(--mono);font-size:11px;">
+      <span style="color:var(--text3)">${p}</span>
+      <span style="color:${v==null?'var(--text3)':v>=0?'var(--green)':'var(--red)'}">${v!=null?fmtPct(v):'—'}</span>
+    </div>`;
+  }).join('');
+}
+
+function setEqPeriod(p, btn) {
+  D.eqPeriod = p;
+  document.querySelectorAll('#sec-bolsa .pbtn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderBolsa();
+  if (D.selIndex) selectIndex(D.selIndex);
+}
+
+// ============================================================
+// SECTION: VALORACIÓN
+// ============================================================
+function renderValoracion() {
+  const el = document.getElementById('val-content');
+  const idxList = Object.values(D.bolsa).filter(x=>!x.isFx&&!x.isVol&&x.per);
+  if (!idxList.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">📊</div><div class="empty-text">Sin datos de valoración</div></div>'; return; }
+
+  const perRef = {
+    ndx:{cheap:22,fair:28,exp:35}, spx:{cheap:16,fair:20,exp:26},
+    sx5e:{cheap:11,fair:14,exp:18}, mxwd:{cheap:14,fair:18,exp:22},
+    nky:{cheap:14,fair:18,exp:23}, mag7:{cheap:28,fair:35,exp:45},
+    rty:{cheap:18,fair:24,exp:32}, mxef:{cheap:9,fair:13,exp:17},
+    mxla:{cheap:7,fair:10,exp:14}, mxcn:{cheap:8,fair:11,exp:15},
+  };
+
+  const maxPer = Math.max(...idxList.map(i=>i.per), 45);
+
+  const barsHTML = idxList.map(idx => {
+    const ref = perRef[idx.id] || {cheap:12,fair:18,exp:24};
+    const pct = Math.min(100, (idx.per / maxPer) * 100);
+    const color = idx.per < ref.fair ? 'var(--green)' : idx.per < ref.exp ? 'var(--gold)' : 'var(--red)';
+    const tag = idx.per < ref.cheap ? 'BARATO' : idx.per < ref.fair ? 'JUSTO' : idx.per < ref.exp ? 'CARO' : 'MUY CARO';
+    return `<div class="per-row">
+      <div class="per-name">${idx.name}</div>
+      <div class="per-track"><div class="per-fill" style="width:${pct.toFixed(1)}%;background:${color}"></div></div>
+      <div class="per-val" style="color:${color}">${idx.per.toFixed(1)}x</div>
+      <div class="per-tag" style="color:${color};background:${color}18">${tag}</div>
+    </div>`;
+  }).join('');
+
+  // PER History Charts — pick 4 main indices
+  const chartIds = ['spx','sx5e','ndx','mxef'].filter(id=>D.bolsa[id]?.perSeries);
+
+  el.innerHTML = `
+    <div class="chart-panel" style="margin-bottom:16px">
+      <div class="cp-title">PER Forward — Comparativa actual</div>
+      <div style="padding:8px 0">${barsHTML}</div>
+    </div>
+    <div class="three-col" id="per-charts">
+      ${chartIds.map(id=>`<div class="chart-panel"><div class="cp-title">${D.bolsa[id].name} — PER histórico</div><div class="chart-wrap" style="height:160px"><canvas id="per-${id}"></canvas></div></div>`).join('')}
+    </div>`;
+
+  // Render PER history charts
+  setTimeout(() => {
+    chartIds.forEach(id => {
+      const idx = D.bolsa[id];
+      const { dates, values } = filterPeriod(idx.perDates, idx.perSeries, '1Y');
+      makeChart(`per-${id}`, 'line', dates.map(d=>d.slice(5)), [lineDs(idx.name, values, 'var(--blue2)')], {
+        plugins:{ ...CHART_BASE.plugins, tooltip:{ ...CHART_BASE.plugins.tooltip, callbacks:{ label:ctx=>` ${ctx.parsed.y.toFixed(1)}x` } } },
+        scales:{ ...CHART_BASE.scales, y:{ ...CHART_BASE.scales.y, ticks:{ ...CHART_BASE.scales.y.ticks, callback:v=>v.toFixed(0)+'x' } } },
+      });
+    });
+  }, 50);
+}
+
+// ============================================================
+// SECTION: RENTA FIJA
+// ============================================================
+function renderRentaFija() {
+  const el = document.getElementById('rf-content');
+  if (!Object.keys(D.tipos).length) { el.innerHTML = '<div class="empty"><div class="empty-icon">📉</div><div class="empty-text">Sin datos de tipos</div></div>'; return; }
+
+  // Table: countries × tenors
+  const countries = ['US','DE','JP','UK'];
+  const tenors = ['2Y','5Y','10Y','30Y'];
+  const cFlags = { US:'🇺🇸',DE:'🇩🇪',JP:'🇯🇵',UK:'🇬🇧' };
+  const cNames = { US:'EEUU',DE:'Alemania',JP:'Japón',UK:'R. Unido' };
+
+  function getVal(country, tenor) {
+    const id = country.toLowerCase() + tenor.toLowerCase().replace('y','') + 'y';
+    return D.tipos[id]?.last ?? null;
+  }
+
+  const tableRows = countries.map(c => {
+    const vals = tenors.map(t => getVal(c,t));
+    const y2 = vals[0], y10 = vals[2];
+    const slope = y2!=null&&y10!=null ? +(y10-y2).toFixed(2) : null;
+    const slopeCls = slope > 0.1 ? 'td-pos' : slope < -0.1 ? 'td-neg' : '';
+    return `<tr>
+      <td>${cFlags[c]} ${cNames[c]}</td>
+      ${vals.map(v=>`<td class="td-val">${v!=null?v.toFixed(2)+'%':'—'}</td>`).join('')}
+      <td class="${slopeCls} td-val">${slope!=null?(slope>0?'+':'')+slope+'%':'—'}</td>
+    </tr>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="two-col" style="margin-bottom:16px">
+      <div class="chart-panel">
+        <div class="cp-title">Tipos por Plazo (%)</div>
+        <table class="data-table">
+          <thead><tr><th>País</th><th>2Y</th><th>5Y</th><th>10Y</th><th>30Y</th><th>Pendiente 2-10</th></tr></thead>
+          <tbody>${tableRows}</tbody>
+        </table>
+      </div>
+      <div class="chart-panel">
+        <div class="cp-title">Pendiente 2-10Y (pb)</div>
+        <div class="chart-wrap" style="height:180px"><canvas id="slope-chart"></canvas></div>
+      </div>
+    </div>
+    <div class="two-col">
+      <div class="chart-panel">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div class="cp-title" style="margin:0">Bono 10Y — Evolución</div>
+          <div class="period-row">
+            <button class="pbtn active" onclick="setRfPeriod('3M',this)">3M</button>
+            <button class="pbtn" onclick="setRfPeriod('6M',this)">6M</button>
+            <button class="pbtn" onclick="setRfPeriod('1Y',this)">1A</button>
+            <button class="pbtn" onclick="setRfPeriod('3Y',this)">3A</button>
+          </div>
+        </div>
+        <div class="chart-wrap" style="height:200px"><canvas id="yield10y-chart"></canvas></div>
+      </div>
+      <div class="chart-panel">
+        <div class="cp-title">Curva de Tipos Actual</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+          ${countries.map(c=>`<button class="pbtn ${c==='US'?'active':''}" onclick="setCurveCountry('${c}',this)">${cFlags[c]} ${cNames[c]}</button>`).join('')}
+        </div>
+        <div class="chart-wrap" style="height:180px"><canvas id="curve-chart"></canvas></div>
+      </div>
+    </div>`;
+
+  // Slope chart
+  setTimeout(() => {
+    const slopeData = countries.map(c => {
+      const y2 = getVal(c,'2Y'), y10 = getVal(c,'10Y');
+      return y2!=null&&y10!=null ? +(y10-y2).toFixed(2) : 0;
+    });
+    makeChart('slope-chart','bar', countries.map(c=>cNames[c]),
+      [{ data:slopeData, backgroundColor:slopeData.map(v=>v>0?'rgba(34,197,94,0.7)':'rgba(239,68,68,0.7)'), borderRadius:4 }]);
+
+    renderYield10y('3M');
+    renderCurve('US');
+  }, 50);
+}
+
+let rfPeriod = '3M', curveCountry = 'US';
+function setRfPeriod(p, btn) {
+  rfPeriod = p;
+  document.querySelectorAll('#rf-content .pbtn').forEach(b=>{ if(['3M','6M','1A','3A'].includes(b.textContent.trim())) b.classList.remove('active'); });
+  btn.classList.add('active');
+  renderYield10y(p);
+}
+function setCurveCountry(c, btn) {
+  curveCountry = c;
+  document.querySelectorAll('#rf-content .pbtn').forEach(b=>{ if(['🇺🇸 EEUU','🇩🇪 Alemania','🇯🇵 Japón','🇬🇧 R. Unido'].some(n=>b.textContent.includes(n.split(' ')[1]))) b.classList.remove('active'); });
+  btn.classList.add('active');
+  renderCurve(c);
+}
+
+const COUNTRY_COLORS = { US:'#3b82f6', DE:'#22c55e', JP:'#f59e0b', UK:'#a78bfa' };
+
+function renderYield10y(period) {
+  const tenorId = '10y';
+  const datasets = [];
+  ['US','DE','JP','UK'].forEach(c => {
+    const id = c.toLowerCase() + '10y';
+    const t = D.tipos[id];
+    if (!t) return;
+    const f = filterPeriod(t.dates, t.values, period==='3A'?null:period);
+    let dates = f.dates, values = f.values;
+    if (period==='3A') {
+      const cut = new Date(); cut.setFullYear(cut.getFullYear()-3);
+      const pairs = t.dates.map((d,i)=>({d,v:t.values[i]})).filter(p=>new Date(p.d)>=cut);
+      dates = pairs.map(p=>p.d); values = pairs.map(p=>p.v);
+    }
+    // Extend to today
+    if (dates.length && values.length) {
+      const last = new Date(dates[dates.length-1]);
+      const today = new Date();
+      const lv = values[values.length-1];
+      let d = new Date(last); d.setDate(d.getDate()+1);
+      while (d <= today) {
+        if (d.getDay()!==0&&d.getDay()!==6) { dates=[...dates,d.toISOString().slice(0,10)]; values=[...values,lv]; }
+        d.setDate(d.getDate()+1);
+      }
+    }
+    const cFlags2 = {US:'🇺🇸',DE:'🇩🇪',JP:'🇯🇵',UK:'🇬🇧'};
+    datasets.push({ ...lineDs(`${cFlags2[c]} ${c} 10Y`, values, COUNTRY_COLORS[c]), labels:dates });
+  });
+  if (!datasets.length) return;
+  const labels = datasets[0].labels || [];
+  datasets.forEach(ds => delete ds.labels);
+  makeChart('yield10y-chart','line', labels.map(d=>d.slice(5)), datasets, {
+    plugins:{ ...CHART_BASE.plugins, legend:{ display:true, labels:{color:'#94a3c4',font:{size:10,family:'IBM Plex Mono'}} } },
+    scales:{ ...CHART_BASE.scales, y:{ ...CHART_BASE.scales.y, ticks:{ ...CHART_BASE.scales.y.ticks, callback:v=>v.toFixed(2)+'%' } } },
+  });
+}
+
+function renderCurve(country) {
+  const tenorIds = ['2y','5y','10y','30y'];
+  const tenorNames = ['2Y','5Y','10Y','30Y'];
+  const values = tenorIds.map(t => { const id = country.toLowerCase()+t; return D.tipos[id]?.last ?? null; }).filter(v=>v!=null);
+  const labels = tenorIds.map((t,i)=>{ const id=country.toLowerCase()+t; return D.tipos[id]?tenorNames[i]:null; }).filter(Boolean);
+  const color = COUNTRY_COLORS[country] || 'var(--blue)';
+  makeChart('curve-chart','line', labels, [{ ...lineDs('Curva', values, color, true), pointRadius:5, pointBackgroundColor:color }], {
+    scales:{ ...CHART_BASE.scales, y:{ ...CHART_BASE.scales.y, ticks:{ ...CHART_BASE.scales.y.ticks, callback:v=>v.toFixed(2)+'%' } } },
+  });
+}
+
+// ============================================================
+// SECTION: CRÉDITO
+// ============================================================
+function renderCredito() {
+  const el = document.getElementById('cr-content');
+  if (!Object.keys(D.spreads).length) { el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">Sin datos de spreads</div></div>'; return; }
+
+  const spreadList = Object.values(D.spreads);
+  const cardsHTML = spreadList.map(s => {
+    const prev = s.values.length>=2 ? s.values[s.values.length-2] : s.last;
+    const chg = prev ? +(s.last - prev).toFixed(1) : 0;
+    const cls = chg > 0 ? 'neg' : 'pos';
+    return `<div class="scard">
+      <div class="sc-region">${s.region}</div>
+      <div class="sc-name">${s.name}</div>
+      <div class="sc-spread">${s.last.toFixed(0)} <small>pb</small></div>
+      <div class="sc-chg" style="color:${chg>0?'var(--red)':chg<0?'var(--green)':'var(--text3)'}">${chg>0?'+':''}${chg} pb</div>
+    </div>`;
+  }).join('');
+
+  const mainSpreads = ['cdx_ig','cdx_hy','itrx_ig','itrx_xover'];
+  const chartPanels = mainSpreads.filter(id=>D.spreads[id]).map(id=>
+    `<div class="chart-panel"><div class="cp-title">${D.spreads[id].name}</div><div class="chart-wrap" style="height:160px"><canvas id="cr-${id}"></canvas></div></div>`
+  ).join('');
+
+  // Comparativo EEUU vs Europa IG
+  const hasComp = D.spreads['cdx_ig'] && D.spreads['itrx_ig'];
+
+  el.innerHTML = `
+    <div class="spread-cards">${cardsHTML}</div>
+    <div class="three-col">${chartPanels}</div>
+    ${hasComp ? `<div class="chart-panel" style="margin-top:16px"><div class="cp-title">EEUU vs Europa — IG Comparativo (pb)</div><div class="chart-wrap" style="height:160px"><canvas id="cr-comp"></canvas></div></div>` : ''}`;
+
+  setTimeout(() => renderCreditoCharts(), 50);
+}
+
+function renderCreditoCharts() {
+  const mainSpreads = ['cdx_ig','cdx_hy','itrx_ig','itrx_xover'];
+  const colors = { cdx_ig:'#3b82f6', cdx_hy:'#f97316', itrx_ig:'#a78bfa', itrx_xover:'#f59e0b' };
+
+  mainSpreads.filter(id=>D.spreads[id]).forEach(id => {
+    const s = D.spreads[id];
+    const f = filterPeriod(s.dates, s.values, D.crPeriod);
+    makeChart(`cr-${id}`, 'line', f.dates.map(d=>d.slice(5)),
+      [{ ...lineDs(s.name, f.values, colors[id], true) }], {
+      plugins:{ ...CHART_BASE.plugins, tooltip:{ ...CHART_BASE.plugins.tooltip, callbacks:{ label:ctx=>` ${ctx.parsed.y.toFixed(0)} pb` } } },
+    });
+  });
+
+  // Comp
+  const cdxIg = D.spreads['cdx_ig'], itrxIg = D.spreads['itrx_ig'];
+  if (cdxIg && itrxIg && document.getElementById('cr-comp')) {
+    const fUs = filterPeriod(cdxIg.dates, cdxIg.values, D.crPeriod);
+    const fEu = filterPeriod(itrxIg.dates, itrxIg.values, D.crPeriod);
+    const minLen = Math.min(fUs.dates.length, fEu.dates.length);
+    makeChart('cr-comp','line', fUs.dates.slice(0,minLen).map(d=>d.slice(5)),
+      [lineDs('EEUU CDX IG', fUs.values.slice(0,minLen), '#3b82f6'),
+       lineDs('Europa iTraxx IG', fEu.values.slice(0,minLen), '#a78bfa')], {
+      plugins:{ ...CHART_BASE.plugins, legend:{ display:true, labels:{color:'#94a3c4',font:{size:10,family:'IBM Plex Mono'}} }, tooltip:{ ...CHART_BASE.plugins.tooltip, callbacks:{ label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(0)} pb` } } },
+    });
+  }
+}
+
+function setCrPeriod(p, btn) {
+  D.crPeriod = p;
+  document.querySelectorAll('#sec-credito .pbtn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderCreditoCharts();
+}
+
+// ============================================================
+// SECTION: MATERIAS PRIMAS
+// ============================================================
+function renderMMPP() {
+  const el = document.getElementById('mm-content');
+  const mmList = Object.values(D.mmpp);
+  if (!mmList.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">🛢️</div><div class="empty-text">Sin datos de materias primas</div></div>'; return; }
+
+  const groups = {};
+  mmList.forEach(m => { if(!groups[m.group]) groups[m.group]=[];  groups[m.group].push(m); });
+  const groupNames = { energia:'Energía', metales:'Metales Preciosos' };
+
+  const cardsHTML = Object.entries(groups).map(([g, items]) => `
+    <div>
+      <div style="font-family:var(--mono);font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:10px">${groupNames[g]||g}</div>
+      <div class="cards-grid" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr))">
+        ${items.map(m => {
+          const perf = periodPerf(m.dates, m.closes, D.mmPeriod) ?? m.ytd;
+          const cls = perf>=0?'pos':'neg';
+          return `<div class="mcard ${cls}">
+            <div class="mc-ticker">${m.unit}</div>
+            <div class="mc-name">${m.name}</div>
+            <div class="mc-price">${fmt(m.price)}</div>
+            <div class="mc-chg ${cc(perf)}">${fmtPct(perf)} <span style="color:var(--text3);font-size:9px">(${D.mmPeriod})</span></div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`).join('<div style="height:20px"></div>');
+
+  // Index charts per group
+  const chartColors = ['#3b82f6','#22c55e','#f59e0b','#ef4444','#a78bfa','#2dd4bf'];
+  const chartPanels = Object.entries(groups).map(([g, items]) => {
+    const id = `mm-${g}`;
+    return `<div class="chart-panel"><div class="cp-title">${groupNames[g]||g} — Base 100 (${D.mmPeriod})</div><div class="chart-wrap" style="height:200px"><canvas id="${id}"></canvas></div></div>`;
+  }).join('');
+
+  el.innerHTML = `<div style="margin-bottom:20px">${cardsHTML}</div><div class="two-col">${chartPanels}</div>`;
+
+  setTimeout(() => {
+    Object.entries(groups).forEach(([g, items]) => {
+      const datasets = items.map((m, i) => {
+        const f = filterPeriod(m.dates, m.closes, D.mmPeriod);
+        if (!f.values.length) return null;
+        const base = f.values[0];
+        const indexed = f.values.map(v => +(v/base*100).toFixed(2));
+        return { ...lineDs(m.name, indexed, chartColors[i%chartColors.length]), labels:f.dates };
+      }).filter(Boolean);
+      if (!datasets.length) return;
+      const labels = datasets[0].labels;
+      datasets.forEach(ds => delete ds.labels);
+      makeChart(`mm-${g}`,'line', labels.map(d=>d.slice(5)), datasets, {
+        plugins:{ ...CHART_BASE.plugins, legend:{ display:true, labels:{color:'#94a3c4',font:{size:10,family:'IBM Plex Mono'}} } },
+        scales:{ ...CHART_BASE.scales, y:{ ...CHART_BASE.scales.y, ticks:{ ...CHART_BASE.scales.y.ticks, callback:v=>v.toFixed(0) } } },
+      });
+    });
+  }, 50);
+}
+
+function setMmPeriod(p, btn) {
+  D.mmPeriod = p;
+  document.querySelectorAll('#sec-mmpp .pbtn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderMMPP();
+}
+
+// ============================================================
+// SECTION: CORRELACIONES
+// ============================================================
+const CORR_PAIRS = [
+  { a:'spx',  b:'brent',  la:'S&P 500',   lb:'Brent'  },
+  { a:'sx5e', b:'brent',  la:'EuroStoxx', lb:'Brent'  },
+  { a:'spx',  b:'gold',   la:'S&P 500',   lb:'Oro'    },
+  { a:'brent',b:'gold',   la:'Brent',     lb:'Oro'    },
+  { a:'spx',  b:'eurusd', la:'S&P 500',   lb:'EUR/USD'},
+  { a:'dxy',  b:'gold',   la:'DXY',       lb:'Oro'    },
+  { a:'spx',  b:'dxy',    la:'S&P 500',   lb:'DXY'    },
+  { a:'brent',b:'eurusd', la:'Brent',     lb:'EUR/USD'},
+];
+
+let selCorrPair = null;
+
+function getSeries(id) {
+  if (D.bolsa[id]) return { dates: D.bolsa[id].dates, values: D.bolsa[id].closes };
+  if (D.mmpp[id])  return { dates: D.mmpp[id].dates,  values: D.mmpp[id].closes  };
+  return null;
+}
+
+function renderCorrelaciones() {
+  const el = document.getElementById('corr-content');
+  if (!D.loaded) { el.innerHTML = '<div class="empty"><div class="empty-icon">🔗</div><div class="empty-text">Sin datos</div></div>'; return; }
+
+  const cardsHTML = CORR_PAIRS.map((pair, i) => {
+    const sa = getSeries(pair.a), sb = getSeries(pair.b);
+    let r = null;
+    if (sa && sb) {
+      const fa = filterPeriod(sa.dates, sa.values, D.corrPeriod);
+      const fb = filterPeriod(sb.dates, sb.values, D.corrPeriod);
+      // Align by date
+      const mapA = {}; fa.dates.forEach((d,i)=>mapA[d]=fa.values[i]);
+      const mapB = {}; fb.dates.forEach((d,i)=>mapB[d]=fb.values[i]);
+      const common = Object.keys(mapA).filter(d=>mapB[d]!=null).sort();
+      if (common.length >= 10) {
+        const retA = dailyRet(common.map(d=>mapA[d]));
+        const retB = dailyRet(common.map(d=>mapB[d]));
+        r = pearson(retA, retB);
+      }
+    }
+    const color = r===null?'var(--text3)':r>0.6?'var(--green)':r>0.2?'#84cc16':r>-0.2?'var(--text3)':r>-0.6?'#f97316':'var(--red)';
+    const lbl = r===null?'—':r>0.6?'Pos. fuerte':r>0.2?'Pos. débil':r>-0.2?'Neutral':r>-0.6?'Neg. débil':'Neg. fuerte';
+    return `<div class="corr-card${selCorrPair===i?' selected':''}" onclick="selectCorrPair(${i})">
+      <div class="corr-pair"><strong style="color:var(--text1)">${pair.la}</strong> <span style="color:var(--text3)">vs</span> <strong style="color:var(--blue2)">${pair.lb}</strong></div>
+      <div class="corr-r" style="color:${color}">${r!=null?r.toFixed(2):'—'}</div>
+      <div class="corr-lbl" style="color:${color}">${lbl}</div>
+      <div class="corr-obs">${D.corrPeriod}</div>
+    </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="corr-grid" style="grid-template-columns:repeat(auto-fill,minmax(400px,1fr))">${cardsHTML}</div>
+    <div class="chart-panel" id="scatter-panel" style="display:none">
+      <div class="cp-title" id="scatter-title"></div>
+      <div class="chart-wrap" style="height:280px"><canvas id="scatter-chart"></canvas></div>
+    </div>`;
+
+  if (selCorrPair !== null) renderScatter(selCorrPair);
+}
+
+function selectCorrPair(i) {
+  selCorrPair = i;
+  renderCorrelaciones();
+}
+
+function renderScatter(i) {
+  const pair = CORR_PAIRS[i];
+  const sa = getSeries(pair.a), sb = getSeries(pair.b);
+  if (!sa || !sb) return;
+
+  const fa = filterPeriod(sa.dates, sa.values, D.corrPeriod);
+  const fb = filterPeriod(sb.dates, sb.values, D.corrPeriod);
+  const mapA = {}; fa.dates.forEach((d,j)=>mapA[d]=fa.values[j]);
+  const mapB = {}; fb.dates.forEach((d,j)=>mapB[d]=fb.values[j]);
+  const common = Object.keys(mapA).filter(d=>mapB[d]!=null).sort();
+  if (common.length < 5) return;
+
+  const retA = dailyRet(common.map(d=>mapA[d]));
+  const retB = dailyRet(common.map(d=>mapB[d]));
+  const r = pearson(retA, retB);
+  const color = r===null?'var(--text3)':r>0.3?'var(--green)':r<-0.3?'var(--red)':'var(--blue)';
+
+  // Trend line
+  const n=retA.length; let sx=0,sy=0,sxy=0,sx2=0;
+  retA.forEach((x,j)=>{sx+=x;sy+=retB[j];sxy+=x*retB[j];sx2+=x*x;});
+  const slope=(n*sxy-sx*sy)/(n*sx2-sx*sx);
+  const intercept=(sy-slope*sx)/n;
+  const minX=Math.min(...retA), maxX=Math.max(...retA);
+
+  document.getElementById('scatter-panel').style.display = 'block';
+  document.getElementById('scatter-title').textContent = `${pair.la} vs ${pair.lb} — r = ${r!=null?r.toFixed(3):'—'}`;
+
+  destroyChart('scatter-chart');
+  const ctx = document.getElementById('scatter-chart');
+  if (!ctx) return;
+  charts['scatter-chart'] = new Chart(ctx.getContext('2d'), {
+    type:'scatter',
+    data:{ datasets:[
+      { label:'Retornos', data:retA.map((x,j)=>({x:+x.toFixed(3),y:+retB[j].toFixed(3)})), backgroundColor:color+'55', borderColor:color, borderWidth:1, pointRadius:3 },
+      { label:'Tendencia', data:[{x:+minX.toFixed(3),y:+(slope*minX+intercept).toFixed(3)},{x:+maxX.toFixed(3),y:+(slope*maxX+intercept).toFixed(3)}], type:'line', borderColor:color, borderWidth:2, borderDash:[5,5], pointRadius:0, fill:false },
+    ]},
+    options:{ ...CHART_BASE, plugins:{ ...CHART_BASE.plugins, tooltip:{ ...CHART_BASE.plugins.tooltip, callbacks:{ label:ctx=>ctx.datasetIndex===0?` ${pair.la}: ${ctx.parsed.x}% / ${pair.lb}: ${ctx.parsed.y}%`:'' } } },
+      scales:{ x:{ ...CHART_BASE.scales.x, ticks:{ ...CHART_BASE.scales.x.ticks, callback:v=>v+'%' }, title:{display:true,text:pair.la+' %',color:'#4f6080',font:{size:10}} }, y:{ ...CHART_BASE.scales.y, ticks:{ ...CHART_BASE.scales.y.ticks, callback:v=>v+'%' }, title:{display:true,text:pair.lb+' %',color:'#4f6080',font:{size:10}} } },
+    },
+  });
+}
+
+function setCorrPeriod(p, btn) {
+  D.corrPeriod = p;
+  document.querySelectorAll('#sec-correlaciones .pbtn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderCorrelaciones();
+}
+
+// ============================================================
+// SECTION: VOLATILIDAD
+// ============================================================
+function renderVolatilidad() {
+  const el = document.getElementById('vol-content');
+  const vix = D.bolsa['vix'], v2x = D.bolsa['v2x'];
+
+  if (!vix && !v2x) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">〰️</div><div class="empty-text">Sin datos de volatilidad</div></div>';
+    return;
+  }
+
+  const volList = [vix, v2x].filter(Boolean);
+  const refs = {
+    vix:  { low:12, normal:20, elevated:30, extreme:40 },
+    v2x:  { low:14, normal:22, elevated:32, extreme:45 },
+  };
+
+  function getZone(id, price) {
+    const r = refs[id];
+    if (!r) return { label:'Normal', bg:'rgba(59,130,246,0.15)', color:'var(--blue2)' };
+    if (price < r.low)      return { label:'Complacencia', bg:'rgba(34,197,94,0.15)',  color:'var(--green)' };
+    if (price < r.normal)   return { label:'Normal',       bg:'rgba(59,130,246,0.15)', color:'var(--blue2)' };
+    if (price < r.elevated) return { label:'Elevada',      bg:'rgba(245,158,11,0.15)', color:'var(--gold)'  };
+    if (price < r.extreme)  return { label:'Extrema',      bg:'rgba(239,68,68,0.15)',  color:'var(--red)'   };
+    return                          { label:'Crisis',       bg:'rgba(139,0,0,0.2)',     color:'#fca5a5'      };
+  }
+
+  function volBarHTML(id, price) {
+    const r = refs[id]; if (!r) return '';
+    const max = r.extreme * 1.3;
+    const pct = Math.min(100, price/max*100);
+    const zone = getZone(id, price);
+    return `<div class="vc-bar-labels">
+      <span>${r.low}</span><span>${r.normal}</span><span>${r.elevated}</span><span>${r.extreme}</span>
+    </div>
+    <div class="vc-bar-track" style="height:8px;border-radius:4px;overflow:hidden;position:relative;background:transparent">
+      <div style="display:flex;height:100%;width:100%;position:absolute">
+        <div style="width:${r.low/max*100}%;background:rgba(34,197,94,0.4)"></div>
+        <div style="width:${(r.normal-r.low)/max*100}%;background:rgba(59,130,246,0.4)"></div>
+        <div style="width:${(r.elevated-r.normal)/max*100}%;background:rgba(245,158,11,0.4)"></div>
+        <div style="width:${(r.extreme-r.elevated)/max*100}%;background:rgba(239,68,68,0.4)"></div>
+        <div style="flex:1;background:rgba(139,0,0,0.4)"></div>
+      </div>
+      <div style="position:absolute;top:-2px;left:${pct.toFixed(1)}%;transform:translateX(-50%);width:3px;height:12px;border-radius:2px;background:${zone.color}"></div>
+    </div>`;
+  }
+
+  const cardsHTML = volList.map(v => {
+    const zone = getZone(v.id, v.price);
+    const descMap = { vix:'Volatilidad implícita del S&P 500 a 30 días.', v2x:'Volatilidad implícita del Euro Stoxx 50 a 30 días.' };
+    return `<div class="vcard">
+      <div class="vc-top">
+        <div><div class="vc-name">${v.name}</div><div class="vc-market">${v.exchange}</div></div>
+        <span class="vc-badge" style="background:${zone.bg};color:${zone.color}">${zone.label}</span>
+      </div>
+      <div class="vc-price">${v.price.toFixed(2)}</div>
+      <div class="vc-desc">${descMap[v.id]||''}</div>
+      ${volBarHTML(v.id, v.price)}
+    </div>`;
+  }).join('');
+
+  const chartPanels = `
+    <div class="chart-panel">
+      <div class="cp-title">VIX — Evolución</div>
+      <div class="chart-wrap" style="height:200px"><canvas id="vol-vix"></canvas></div>
+    </div>
+    <div class="chart-panel">
+      <div class="cp-title">VSTOXX — Evolución</div>
+      <div class="chart-wrap" style="height:200px"><canvas id="vol-v2x"></canvas></div>
+    </div>
+    <div class="chart-panel">
+      <div class="cp-title">Diferencial VIX - VSTOXX</div>
+      <div class="chart-wrap" style="height:200px"><canvas id="vol-diff"></canvas></div>
+    </div>`;
+
+  el.innerHTML = `<div class="vol-cards">${cardsHTML}</div><div class="three-col">${chartPanels}</div>`;
+
+  setTimeout(() => {
+    if (vix && vix.dates.length) {
+      const f = filterPeriod(vix.dates, vix.closes, '1Y');
+      const refN = Array(f.dates.length).fill(refs.vix.normal);
+      const refE = Array(f.dates.length).fill(refs.vix.elevated);
+      makeChart('vol-vix','line', f.dates.map(d=>d.slice(5)), [
+        lineDs('VIX', f.values, '#3b82f6', true),
+        { ...lineDs('Normal (20)', refN, '#3b82f6'), borderWidth:1, borderDash:[4,4] },
+        { ...lineDs('Elevado (30)', refE, '#f59e0b'), borderWidth:1, borderDash:[4,4] },
+      ], { plugins:{ ...CHART_BASE.plugins, legend:{ display:true, labels:{color:'#94a3c4',font:{size:10,family:'IBM Plex Mono'}} } } });
+    }
+    if (v2x && v2x.dates.length) {
+      const f = filterPeriod(v2x.dates, v2x.closes, '1Y');
+      const refN = Array(f.dates.length).fill(refs.v2x.normal);
+      const refE = Array(f.dates.length).fill(refs.v2x.elevated);
+      makeChart('vol-v2x','line', f.dates.map(d=>d.slice(5)), [
+        lineDs('VSTOXX', f.values, '#ef4444', true),
+        { ...lineDs('Normal (22)', refN, '#ef4444'), borderWidth:1, borderDash:[4,4] },
+        { ...lineDs('Elevado (32)', refE, '#f59e0b'), borderWidth:1, borderDash:[4,4] },
+      ], { plugins:{ ...CHART_BASE.plugins, legend:{ display:true, labels:{color:'#94a3c4',font:{size:10,family:'IBM Plex Mono'}} } } });
+    }
+    if (vix && v2x && vix.dates.length && v2x.dates.length) {
+      const mapV={}, mapS={};
+      vix.dates.forEach((d,i)=>{ if(vix.closes[i]) mapV[d]=vix.closes[i]; });
+      v2x.dates.forEach((d,i)=>{ if(v2x.closes[i]) mapS[d]=v2x.closes[i]; });
+      const common = Object.keys(mapV).filter(d=>mapS[d]).sort();
+      const diff = common.map(d=>+(mapV[d]-mapS[d]).toFixed(2));
+      const f = filterPeriod(common, diff, '1Y');
+      makeChart('vol-diff','line', f.dates.map(d=>d.slice(5)), [lineDs('VIX-VSTOXX', f.values, '#2dd4bf', true)]);
+    }
+  }, 50);
+}
+
+// ============================================================
+// FEAR & GREED
+// ============================================================
+function computeFG(ctx) {
+  function sc(val, breaks, scores) { for(let i=0;i<breaks.length;i++) if(val<breaks[i]) return scores[i]; return scores[scores.length-1]; }
+  const s1 = sc(ctx.vol_cur/ctx.vol_ma, [0.6,0.7,0.8,0.9,1.0,1.1,1.25,1.5],[92,82,72,62,52,42,30,18,8]);
+  const s2 = sc(ctx.ma125_pct,[8,5,3,1.5,0,-2,-5],[90,80,70,60,50,38,25,10]);
+  const s3 = sc(ctx.rsi,[72,65,58,50,42,35,28],[88,75,62,52,40,28,18,8]);
+  const s4 = sc(ctx.hy_ig,[150,180,210,240,270,310,370],[88,76,63,52,42,30,18,8]);
+  const s5 = sc(ctx.eq_bond,[8,5,2.5,0.5,-0.5,-2.5,-5],[90,78,65,55,45,33,20,8]);
+  const comp = Math.round(s1*.2+s2*.25+s3*.2+s4*.2+s5*.15);
+  return { comp: Math.min(100,Math.max(0,comp+Math.round((Math.random()-.5)*2))), s1,s2,s3,s4,s5 };
+}
+
+function fgInfo(score) {
+  if(score>=80) return {label:'Codicia Extrema',color:'#22c55e'};
+  if(score>=60) return {label:'Codicia',color:'#84cc16'};
+  if(score>=40) return {label:'Neutral',color:'var(--gold)'};
+  if(score>=20) return {label:'Miedo',color:'#f97316'};
+  return {label:'Miedo Extremo',color:'var(--red)'};
+}
+
+function drawGauge(id, score) {
+  const canvas = document.getElementById(id);
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W=canvas.width, H=canvas.height;
+  ctx.clearRect(0,0,W,H);
+  const cx=W/2, cy=H*.88, r=H*.74;
+  const zones=[{f:0,t:20,c:'#ef4444'},{f:20,t:40,c:'#f97316'},{f:40,t:60,c:'#eab308'},{f:60,t:80,c:'#84cc16'},{f:80,t:100,c:'#22c55e'}];
+  zones.forEach(z=>{
+    ctx.beginPath(); ctx.arc(cx,cy,r,Math.PI+(z.f/100)*Math.PI,Math.PI+(z.t/100)*Math.PI);
+    ctx.strokeStyle=z.c+'33'; ctx.lineWidth=18; ctx.stroke();
+  });
+  const info=fgInfo(score), sa=Math.PI+(score/100)*Math.PI;
+  ctx.beginPath(); ctx.arc(cx,cy,r,Math.PI,sa);
+  ctx.strokeStyle=info.color; ctx.lineWidth=18; ctx.lineCap='round'; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+r*.7*Math.cos(sa),cy+r*.7*Math.sin(sa));
+  ctx.strokeStyle='#e2e8f4'; ctx.lineWidth=2; ctx.lineCap='round'; ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx,cy,5,0,Math.PI*2); ctx.fillStyle='#e2e8f4'; ctx.fill();
+  ctx.font='9px IBM Plex Mono'; ctx.fillStyle='#4f6080'; ctx.textAlign='center';
+  ctx.fillText('0',cx-r-8,cy+12); ctx.fillText('50',cx,cy-r-8); ctx.fillText('100',cx+r+10,cy+12);
+}
+
+function renderFG() {
+  // Dynamic context from loaded data
+  const vix = D.bolsa['vix'];
+  const vixPrice = vix ? vix.price : 17.2;
+  const vixMA = vix && vix.closes.length >= 50 ? vix.closes.slice(-50).reduce((a,b)=>a+b)/50 : vixPrice*1.1;
+  const spx = D.bolsa['spx'];
+  const spxMa125Pct = spx && spx.closes.length >= 125 ? +((spx.price - spx.closes.slice(-125)[0])/spx.closes.slice(-125)[0]*100).toFixed(1) : 3.2;
+  const cdxIg = D.spreads['cdx_ig'], cdxHy = D.spreads['cdx_hy'];
+  const hyIgDiff = cdxIg && cdxHy ? cdxHy.last - cdxIg.last : 214;
+
+  const usCtx = { vol_cur:vixPrice, vol_ma:vixMA, ma125_pct:spxMa125Pct, rsi:62, hy_ig:hyIgDiff, eq_bond:5.2 };
+  const euCtx = { vol_cur:vixPrice*1.08, vol_ma:vixMA*1.08, ma125_pct:spxMa125Pct*.7, rsi:56, hy_ig:hyIgDiff*1.1, eq_bond:3.8 };
+
+  const usR = computeFG(usCtx), euR = computeFG(euCtx);
+  const usI = fgInfo(usR.comp), euI = fgInfo(euR.comp);
+
+  drawGauge('gauge-us', usR.comp);
+  drawGauge('gauge-eu', euR.comp);
+
+  document.getElementById('fg-us-val').textContent = usR.comp;
+  document.getElementById('fg-us-val').style.color = usI.color;
+  document.getElementById('fg-us-lbl').textContent = usI.label;
+  document.getElementById('fg-us-lbl').style.color = usI.color;
+  document.getElementById('fg-eu-val').textContent = euR.comp;
+  document.getElementById('fg-eu-val').style.color = euI.color;
+  document.getElementById('fg-eu-lbl').textContent = euI.label;
+  document.getElementById('fg-eu-lbl').style.color = euI.color;
+
+  function indHTML(name, val, score) {
+    const sig = score>=60?{l:'Alcista',c:'sig-bull'}:score>=40?{l:'Neutral',c:'sig-neut'}:{l:'Bajista',c:'sig-bear'};
+    return `<div class="fg-ind"><div class="fg-ind-top"><span class="fg-ind-name">${name}</span><span class="fg-ind-val">${val}</span><span class="fg-sig ${sig.c}">${sig.l}</span></div></div>`;
+  }
+  document.getElementById('fg-us-inds').innerHTML =
+    indHTML('Volatilidad vs MA50', `${vixPrice.toFixed(1)} vs ${vixMA.toFixed(1)}`, usR.s1) +
+    indHTML('S&P vs MA125', (spxMa125Pct>=0?'+':'')+spxMa125Pct+'%', usR.s2) +
+    indHTML('RSI 14d', '62.0', usR.s3) +
+    indHTML('HY - IG Spread', hyIgDiff.toFixed(0)+' pb', usR.s4);
+  document.getElementById('fg-eu-inds').innerHTML =
+    indHTML('VSTOXX vs MA50', `${(vixPrice*1.08).toFixed(1)} vs ${(vixMA*1.08).toFixed(1)}`, euR.s1) +
+    indHTML('SX5E vs MA125', ((spxMa125Pct*.7)>=0?'+':'')+(spxMa125Pct*.7).toFixed(1)+'%', euR.s2) +
+    indHTML('RSI 14d', '56.0', euR.s3) +
+    indHTML('HY - IG Spread', (hyIgDiff*1.1).toFixed(0)+' pb', euR.s4);
+}
+
+// ============================================================
+// ESCENARIOS
+// ============================================================
+const SCENARIOS = [
+  { id:'soft',   name:'Aterrizaje Suave',    base:40, color:'#22c55e', desc:'Inflación se modera sin recesión. Tipos bajan gradualmente. Favorable para renta variable y crédito.' },
+  { id:'hard',   name:'Aterrizaje Duro',     base:20, color:'#ef4444', desc:'Desaceleración pronunciada. Beneficios empresariales caen. Risk-off generalizado.' },
+  { id:'noland', name:'No Landing',          base:25, color:'#f59e0b', desc:'Economía sigue caliente, inflación persistente. Tipos altos por más tiempo. Presión en múltiplos.' },
+  { id:'stagfl', name:'Estanflación',         base:10, color:'#a78bfa', desc:'Bajo crecimiento + inflación alta. Peor escenario para activos financieros.' },
+  { id:'reaccel',name:'Reaceleración',        base:5,  color:'#2dd4bf', desc:'Sorpresa positiva de crecimiento. Bancos centrales deben frenar bajadas de tipos.' },
+];
+
+const AA_BASE = {
+  soft:   { 'RV Desarrollados':40,'RV Emergentes':10,'RF Gobierno':20,'RF Crédito IG':15,'Crédito HY':10,'Materias Primas':5 },
+  hard:   { 'RV Desarrollados':20,'RV Emergentes':5, 'RF Gobierno':40,'RF Crédito IG':20,'Crédito HY':5, 'Materias Primas':10},
+  noland: { 'RV Desarrollados':35,'RV Emergentes':10,'RF Gobierno':10,'RF Crédito IG':15,'Crédito HY':15,'Materias Primas':15},
+  stagfl: { 'RV Desarrollados':15,'RV Emergentes':10,'RF Gobierno':25,'RF Crédito IG':10,'Crédito HY':5, 'Materias Primas':35},
+  reaccel:{ 'RV Desarrollados':45,'RV Emergentes':15,'RF Gobierno':10,'RF Crédito IG':10,'Crédito HY':10,'Materias Primas':10},
+};
+const AA_COLORS = ['#3b82f6','#22c55e','#f59e0b','#a78bfa','#ef4444','#2dd4bf'];
+
+let scProbs = Object.fromEntries(SCENARIOS.map(s=>[s.id, s.base]));
+
+function renderEscenarios() {
+  const cardsEl = document.getElementById('sc-cards');
+  cardsEl.innerHTML = SCENARIOS.map(sc => `
+    <div class="sc-card">
+      <div class="sc-card-top">
+        <div class="sc-card-name">${sc.name}</div>
+        <div class="sc-card-prob" style="color:${sc.color}" id="scv-${sc.id}">${scProbs[sc.id]}%</div>
+      </div>
+      <input type="range" class="sc-slider" min="0" max="100" value="${scProbs[sc.id]}"
+        oninput="updateScenario('${sc.id}',+this.value,this)"
+        style="accent-color:${sc.color}">
+      <div class="sc-desc">${sc.desc}</div>
+    </div>`).join('');
+
+  updateAAChart();
+}
+
+function updateScenario(id, val, slider) {
+  scProbs[id] = val;
+  document.getElementById('scv-'+id).textContent = val+'%';
+  updateAAChart();
+}
+
+function updateAAChart() {
+  const total = Object.values(scProbs).reduce((a,b)=>a+b,0);
+  if (!total) return;
+
+  // Weighted AA
+  const aa = {};
+  SCENARIOS.forEach(sc => {
+    const w = scProbs[sc.id]/total;
+    Object.entries(AA_BASE[sc.id]).forEach(([asset, pct]) => {
+      aa[asset] = (aa[asset]||0) + pct*w;
+    });
+  });
+
+  const labels = Object.keys(aa);
+  const values = labels.map(l=>+aa[l].toFixed(1));
+
+  destroyChart('sc-donut');
+  const ctx = document.getElementById('sc-donut');
+  if (!ctx) return;
+  charts['sc-donut'] = new Chart(ctx.getContext('2d'), {
+    type:'doughnut',
+    data:{ labels, datasets:[{ data:values, backgroundColor:AA_COLORS.map(c=>c+'cc'), borderColor:'#0a0e17', borderWidth:2 }] },
+    options:{ responsive:true, maintainAspectRatio:false, animation:{duration:300},
+      plugins:{ legend:{ display:true, position:'right', labels:{color:'#94a3c4',font:{size:10,family:'IBM Plex Mono'},boxWidth:12} }, tooltip:{ backgroundColor:'#1a2235',bodyColor:'#e2e8f4',callbacks:{ label:ctx=>` ${ctx.label}: ${ctx.parsed.toFixed(1)}%` } } }
+    },
+  });
+
+  document.getElementById('sc-aa').innerHTML = labels.map((l,i)=>
+    `<div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;padding:4px 0;border-bottom:1px solid var(--border);">
+      <span style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:2px;background:${AA_COLORS[i]};display:inline-block"></span><span style="color:var(--text2)">${l}</span></span>
+      <span style="color:var(--text1);font-weight:500">${values[i].toFixed(1)}%</span>
+    </div>`
+  ).join('');
+}
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+let activeSection = 'bolsa';
+
+function showSection(name, btn) {
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('sec-'+name).classList.add('active');
+  if (btn) btn.classList.add('active');
+  activeSection = name;
+
+  if (!D.loaded) return;
+
+  switch(name) {
+    case 'bolsa':        renderBolsa(); break;
+    case 'valoracion':   renderValoracion(); break;
+    case 'renta-fija':   renderRentaFija(); break;
+    case 'credito':      renderCredito(); break;
+    case 'mmpp':         renderMMPP(); break;
+    case 'correlaciones':renderCorrelaciones(); break;
+    case 'volatilidad':  renderVolatilidad(); break;
+    case 'fg':           renderFG(); break;
+    case 'escenarios':   renderEscenarios(); break;
+  }
+}
+
+function renderAll() {
+  buildTicker();
+  showSection(activeSection, document.querySelector(`.nav-btn.active`));
+  // Always render FG and scenarios (they work without data)
+  renderFG();
+  renderEscenarios();
+}
+
+// ============================================================
+// UPLOAD UI
+// ============================================================
+function openUpload() { document.getElementById('upload-overlay').classList.add('open'); }
+function closeUpload() { document.getElementById('upload-overlay').classList.remove('open'); }
+
+document.getElementById('file-input').addEventListener('change', async e => {
+  const file = e.target.files[0]; if (!file) return;
+  await processFile(file);
+});
+
+const dz = document.getElementById('drop-zone');
+dz.addEventListener('dragover', e=>{ e.preventDefault(); dz.classList.add('over'); });
+dz.addEventListener('dragleave', ()=>dz.classList.remove('over'));
+dz.addEventListener('drop', async e=>{
+  e.preventDefault(); dz.classList.remove('over');
+  const file = e.dataTransfer.files[0]; if(file) await processFile(file);
+});
+
+async function processFile(file) {
+  const st = document.getElementById('upload-status');
+  st.style.color = 'var(--blue2)';
+  st.textContent = '⏳ Procesando...';
+  try {
+    await loadExcel(file);
+    const idxCount = Object.keys(D.bolsa).length;
+    const mmCount  = Object.keys(D.mmpp).length;
+    const tipoCount= Object.keys(D.tipos).length;
+    const spCount  = Object.keys(D.spreads).length;
+    st.style.color = 'var(--green)';
+    st.textContent = `✓ ${idxCount} índices · ${mmCount} materias primas · ${tipoCount} tipos · ${spCount} spreads`;
+
+    // Update header
+    const dot = document.getElementById('status-dot');
+    dot.classList.add('active');
+    document.getElementById('status-text').textContent = file.name.replace('.xlsx','');
+    document.getElementById('upload-btn').classList.add('loaded');
+    document.getElementById('upload-btn').textContent = '✓ ' + file.name.split('.')[0];
+
+    setTimeout(() => {
+      closeUpload();
+      renderAll();
+    }, 800);
+  } catch(err) {
+    st.style.color = 'var(--red)';
+    st.textContent = '✗ Error: ' + err.message;
+    console.error(err);
+  }
+}
+
+// ============================================================
+// INIT
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+  // Render FG and scenarios immediately (no data needed)
+  renderFG();
+  renderEscenarios();
+  // Show upload on first load
+  openUpload();
+});
+</script>
 </body>
 </html>
