@@ -479,7 +479,7 @@ canvas { display:block; }
   <div class="upload-box">
     <div class="upload-icon">📊</div>
     <div class="upload-title">MARKET MONITOR</div>
-    <div class="upload-sub">Carga el archivo <strong style="color:var(--text1)">DAtos_Claude.xlsx</strong><br>con datos Bloomberg actualizados</div>
+    <div class="upload-sub">Sube el archivo <strong style="color:var(--text1)">Datos_Claude.xlsx</strong> actualizado con Bloomberg.<br>O súbelo directamente al repositorio de GitHub para carga automática.</div>
     <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
       <div style="font-size:28px">⬆</div>
       <div class="drop-text">Arrastra aquí o haz clic para seleccionar</div>
@@ -1851,28 +1851,62 @@ function renderFGIndicatorHTML(ind) {
   </div>`;
 }
 
+// ---- RSI 14 días (Wilder) ----
+function calcRSI(closes, period) {
+  period = period || 14;
+  if (!closes || closes.length < period + 1) return null;
+  const slice = closes.slice(-(period * 3 + 1));
+  let gains = 0, losses = 0;
+  for (let i = 1; i <= period; i++) {
+    const diff = slice[i] - slice[i-1];
+    if (diff >= 0) gains += diff; else losses -= diff;
+  }
+  let avgGain = gains / period, avgLoss = losses / period;
+  for (let i = period + 1; i < slice.length; i++) {
+    const diff = slice[i] - slice[i-1];
+    avgGain = (avgGain * (period-1) + Math.max(0, diff)) / period;
+    avgLoss = (avgLoss * (period-1) + Math.max(0,-diff)) / period;
+  }
+  if (avgLoss === 0) return 100;
+  return +(100 - 100 / (1 + avgGain/avgLoss)).toFixed(1);
+}
+
+// ---- Bolsa vs Bono 10Y (20 sesiones) ----
+// Retorno bolsa - retorno precio bono (≈ -duración × ΔYield)
+function calcEquityVsBond(eqCloses, yieldVals, n) {
+  n = n || 20;
+  if (!eqCloses || eqCloses.length < n+1) return null;
+  if (!yieldVals || yieldVals.length < n+1) return null;
+  const eqRet   = (eqCloses[eqCloses.length-1] - eqCloses[eqCloses.length-1-n]) / eqCloses[eqCloses.length-1-n] * 100;
+  const yldChg  = yieldVals[yieldVals.length-1] - yieldVals[yieldVals.length-1-n];
+  const bondRet = -8 * yldChg;
+  return +((eqRet - bondRet).toFixed(1));
+}
+
 function renderFG() {
-  // Build context from loaded data
-  const vix = D.bolsa['vix'];
-  const v2x = D.bolsa['v2x'];
-  const spx = D.bolsa['spx'];
-  const sx5e = D.bolsa['sx5e'];
+  const vix  = D.bolsa['vix'],  v2x  = D.bolsa['v2x'];
+  const spx  = D.bolsa['spx'],  sx5e = D.bolsa['sx5e'];
   const cdxIg = D.spreads['cdx_ig'], cdxHy = D.spreads['cdx_hy'];
   const itrxIg = D.spreads['itrx_ig'], itrxXover = D.spreads['itrx_xover'];
+  const us10y = D.tipos['us10y'], de10y = D.tipos['de10y'];
 
   const vixPrice  = vix  ? vix.price  : 17.2;
   const v2xPrice  = v2x  ? v2x.price  : 19.4;
-  const vixMA50   = vix  && vix.closes.length >= 50  ? vix.closes.slice(-50).reduce((a,b)=>a+b)/50 : vixPrice*1.1;
-  const v2xMA50   = v2x  && v2x.closes.length >= 50  ? v2x.closes.slice(-50).reduce((a,b)=>a+b)/50 : v2xPrice*1.1;
-
+  const vixMA50   = vix  && vix.closes.length  >= 50 ? vix.closes.slice(-50).reduce((a,b)=>a+b)/50  : vixPrice*1.1;
+  const v2xMA50   = v2x  && v2x.closes.length  >= 50 ? v2x.closes.slice(-50).reduce((a,b)=>a+b)/50  : v2xPrice*1.1;
   const spxMa125  = spx  && spx.closes.length  >= 125 ? +((spx.price  - spx.closes.slice(-125)[0])  / spx.closes.slice(-125)[0]  * 100).toFixed(1) : 3.8;
   const sx5eMa125 = sx5e && sx5e.closes.length >= 125 ? +((sx5e.price - sx5e.closes.slice(-125)[0]) / sx5e.closes.slice(-125)[0] * 100).toFixed(1) : 2.1;
+
+  const usRsi    = calcRSI(spx?.closes,  14) ?? 62.0;
+  const euRsi    = calcRSI(sx5e?.closes, 14) ?? 55.0;
+  const usEqBond = calcEquityVsBond(spx?.closes,  us10y?.values, 20) ?? 5.2;
+  const euEqBond = calcEquityVsBond(sx5e?.closes, de10y?.values, 20) ?? 3.1;
 
   const usHyIg = cdxIg && cdxHy ? +(cdxHy.last - cdxIg.last).toFixed(0) : 214;
   const euHyIg = itrxIg && itrxXover ? +(itrxXover.last - itrxIg.last).toFixed(0) : 256;
 
-  const usCtx = { vol_current:vixPrice, vol_avg50:vixMA50,  price_vs_ma125_pct:spxMa125,  rsi:68.0, hy_ig_diff:usHyIg, equity_bond_20d:7.9 };
-  const euCtx = { vol_current:v2xPrice, vol_avg50:v2xMA50,  price_vs_ma125_pct:sx5eMa125, rsi:58.0, hy_ig_diff:euHyIg, equity_bond_20d:4.3 };
+  const usCtx = { vol_current:vixPrice, vol_avg50:vixMA50,  price_vs_ma125_pct:spxMa125,  rsi:usRsi, hy_ig_diff:usHyIg, equity_bond_20d:usEqBond };
+  const euCtx = { vol_current:v2xPrice, vol_avg50:v2xMA50,  price_vs_ma125_pct:sx5eMa125, rsi:euRsi, hy_ig_diff:euHyIg, equity_bond_20d:euEqBond };
 
   const usScores = computeComposite(usCtx);
   const euScores = computeComposite(euCtx);
@@ -2065,12 +2099,51 @@ async function processFile(file) {
 // ============================================================
 // INIT
 // ============================================================
+// ---- AUTO-LOAD EXCEL FROM REPO ----
+const EXCEL_URL = 'Datos_Claude.xlsx'; // fichero en la raíz del repo
+
+async function autoLoadExcel() {
+  const st = document.getElementById('upload-status');
+  const dot = document.getElementById('status-dot');
+  const statusText = document.getElementById('status-text');
+
+  // Show loading state in header
+  statusText.textContent = 'Cargando datos...';
+
+  try {
+    const res = await fetch(EXCEL_URL + '?t=' + Date.now(), { cache: 'no-cache' });
+    if (!res.ok) throw new Error('No se encontró el archivo');
+
+    const buffer = await res.arrayBuffer();
+    const file = new File([buffer], 'Datos_Claude.xlsx',
+      { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+    await loadExcel(file);
+
+    // Update header
+    dot.classList.add('active');
+    statusText.textContent = 'Datos Claude · ' + new Date().toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
+    document.getElementById('upload-btn').classList.add('loaded');
+    document.getElementById('upload-btn').innerHTML = '✓ Datos Claude';
+
+    renderAll();
+    closeUpload();
+
+  } catch(err) {
+    // File not found in repo — show manual upload modal
+    statusText.textContent = 'Sin datos';
+    openUpload();
+    if (st) {
+      st.style.color = '#6b8fa0';
+      st.textContent = 'No se encontró Datos_Claude.xlsx en el repositorio. Sube el archivo manualmente.';
+    }
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-  // Render FG and scenarios immediately (no data needed)
   renderFG();
   renderEscenarios();
-  // Show upload on first load
-  openUpload();
+  autoLoadExcel();
 });
 </script>
 <script src="assets/js/ppt-export.js"></script>
