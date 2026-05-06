@@ -520,8 +520,120 @@ function setYield10yPeriod(period, btn) {
 }
 
 
-// ---- CREDIT PERIOD FILTER ----
-let creditPeriod = '1W';
+// ---- VALUATION PANEL ----
+function renderValuationPanel() {
+  const container = document.getElementById('val-bars');
+  if (!container) return;
+  const indices = window.marketData.indices;
+
+  // PER reference ranges for color coding
+  const perRef = {
+    sp500:      { cheap: 16, fair: 20, expensive: 25 },
+    nasdaq:     { cheap: 22, fair: 28, expensive: 35 },
+    eurostoxx:  { cheap: 11, fair: 15, expensive: 19 },
+    msci_acwi:  { cheap: 14, fair: 18, expensive: 22 },
+    msci_em:    { cheap: 9,  fair: 13, expensive: 17 },
+    msci_latam: { cheap: 7,  fair: 10, expensive: 14 },
+    msci_china: { cheap: 8,  fair: 12, expensive: 16 },
+  };
+
+  const items = Object.values(indices).filter(idx => idx.per && idx.per > 0);
+  if (!items.length) { container.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:12px">Sin datos de valoración</div>'; return; }
+
+  const maxPer = Math.max(...items.map(i => i.per), 40);
+
+  container.innerHTML = items.map(idx => {
+    const ref = perRef[idx.id] || { cheap: 12, fair: 18, expensive: 24 };
+    const pct = Math.min(100, (idx.per / maxPer) * 100);
+    const color = idx.per < ref.fair ? 'var(--green)' : idx.per < ref.expensive ? '#f59e0b' : 'var(--red)';
+    const label = idx.per < ref.cheap ? 'Barata' : idx.per < ref.fair ? 'Razonable' : idx.per < ref.expensive ? 'Cara' : 'Muy cara';
+
+    return `<div class="val-row">
+      <div class="val-name">${idx.name}</div>
+      <div class="val-bar-wrap">
+        <div class="val-bar-track">
+          <div class="val-bar-fill" style="width:${pct.toFixed(1)}%;background:${color}"></div>
+        </div>
+      </div>
+      <div class="val-per" style="color:${color}">${idx.per.toFixed(1)}x</div>
+      <div class="val-label" style="color:${color}">${label}</div>
+    </div>`;
+  }).join('');
+}
+
+// ---- EU CREDIT CHARTS ----
+function renderEUCreditCharts() {
+  const credit = window.marketData.credit;
+  const euIg = credit.find(c => c.id === 'eu_ig');
+  const euHy = credit.find(c => c.id === 'eu_hy');
+  const usIg = credit.find(c => c.id === 'us_ig');
+  const cp = (typeof creditPeriod !== 'undefined') ? creditPeriod : '3M';
+
+  function toSeries(item, fallback) {
+    if (item && item.dates && item.dates.length > 5 && item.values && item.values.length > 5) {
+      const sample = item.values[item.values.length - 1];
+      const vals = sample < 5 ? item.values.map(v => +(v * 100).toFixed(1)) : item.values;
+      const filtered = filterByPeriod(item.dates, vals, cp);
+      return { dates: filtered.dates, series: filtered.closes };
+    }
+    const gen = generateHistoricalSeries(fallback, 252, 0.015);
+    const filtered = filterByPeriod(gen.dates, gen.series, cp);
+    return { dates: filtered.dates, series: filtered.closes };
+  }
+
+  const igEU = toSeries(euIg, 62);
+  const hyEU = toSeries(euHy, 310);
+  const igUS = toSeries(usIg, 98);
+
+  const tooltipPb = { callbacks: { label: ctx => ` ${ctx.parsed.y.toFixed(0)} pb` } };
+  const legendOpts = { display: true, labels: { color: '#2A5A72', font: { size: 11 } } };
+
+  // iTraxx EUR IG
+  destroyChart('eu-ig-chart');
+  const euIgCtx = document.getElementById('eu-ig-chart');
+  if (euIgCtx) {
+    charts['eu-ig-chart'] = new Chart(euIgCtx.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: igEU.dates.map(d => d.slice(5)),
+        datasets: [{ label: 'iTraxx EUR IG', data: igEU.series, borderColor: '#a855f7', backgroundColor: 'rgba(168,85,247,0.06)', borderWidth: 2, fill: true, pointRadius: 0, tension: 0.3 }],
+      },
+      options: { ...CHART_DEFAULTS, plugins: { ...CHART_DEFAULTS.plugins, legend: legendOpts, tooltip: { ...CHART_DEFAULTS.plugins.tooltip, ...tooltipPb } } },
+    });
+  }
+
+  // iTraxx Xover
+  destroyChart('eu-hy-chart');
+  const euHyCtx = document.getElementById('eu-hy-chart');
+  if (euHyCtx) {
+    charts['eu-hy-chart'] = new Chart(euHyCtx.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: hyEU.dates.map(d => d.slice(5)),
+        datasets: [{ label: 'iTraxx Xover', data: hyEU.series, borderColor: '#eab308', backgroundColor: 'rgba(234,179,8,0.06)', borderWidth: 2, fill: true, pointRadius: 0, tension: 0.3 }],
+      },
+      options: { ...CHART_DEFAULTS, plugins: { ...CHART_DEFAULTS.plugins, legend: legendOpts, tooltip: { ...CHART_DEFAULTS.plugins.tooltip, ...tooltipPb } } },
+    });
+  }
+
+  // EEUU vs Europa IG comparativo
+  const minLen = Math.min(igUS.series.length, igEU.series.length);
+  destroyChart('us-eu-ig-chart');
+  const compCtx = document.getElementById('us-eu-ig-chart');
+  if (compCtx && minLen > 0) {
+    charts['us-eu-ig-chart'] = new Chart(compCtx.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: igUS.dates.slice(0, minLen).map(d => d.slice(5)),
+        datasets: [
+          { label: 'EEUU IG (CDX)', data: igUS.series.slice(0, minLen), borderColor: '#0085CA', borderWidth: 1.5, pointRadius: 0, tension: 0.3 },
+          { label: 'Europa IG (iTraxx)', data: igEU.series.slice(0, minLen), borderColor: '#a855f7', borderWidth: 1.5, pointRadius: 0, tension: 0.3 },
+        ],
+      },
+      options: { ...CHART_DEFAULTS, plugins: { ...CHART_DEFAULTS.plugins, legend: legendOpts, tooltip: { ...CHART_DEFAULTS.plugins.tooltip, ...tooltipPb } } },
+    });
+  }
+}
 
 function setCreditPeriod(period, btn) {
   creditPeriod = period;
