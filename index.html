@@ -978,10 +978,11 @@ function loadExcel(file) {
           const s = parseSheet(eySheet, EY_MAP);
           Object.entries(s).forEach(([ticker, data]) => {
             const id = EY_MAP[ticker];
-            if (id && D.bolsa[id]) {
+            if (id && data.dates.length > 0) {
               D.ey[id] = { dates: data.dates, values: data.values };
             }
           });
+          console.log('EY loaded:', Object.keys(D.ey));
         }
 
         // FCFY — Free Cash Flow Yield
@@ -990,10 +991,11 @@ function loadExcel(file) {
           const s = parseSheet(fcfySheet, FCFY_MAP);
           Object.entries(s).forEach(([ticker, data]) => {
             const id = FCFY_MAP[ticker];
-            if (id) {
+            if (id && data.dates.length > 0) {
               D.fcfy[id] = { dates: data.dates, values: data.values };
             }
           });
+          console.log('FCFY loaded:', Object.keys(D.fcfy));
         }
 
         // VALORACIÓN — estructura diferente: tickers en fila 3 (sin col vacía), fecha en col par, valor en col impar
@@ -1213,6 +1215,10 @@ function renderEqDetailChart(id, period) {
     dates = f.dates; values = f.values; label = 'FCF Yield %';
     color = '#a78bfa'; yFormat = v => v.toFixed(2)+'%';
   } else {
+    // Fallback to price (also used when EY/FCFY not available for this index)
+    if ((eqChartType === 'ey' && !D.ey[id]) || (eqChartType === 'fcfy' && !D.fcfy[id])) {
+      console.log(`No ${eqChartType} data for ${id}`);
+    }
     const f = filterPeriod(idx.dates, idx.closes, period);
     dates = f.dates; values = f.values; label = idx.name;
     const isPos = values.length && values[values.length-1] >= values[0];
