@@ -669,14 +669,30 @@ canvas { display:block; }
 
 <!-- ESCENARIOS -->
 <section class="section" id="sec-escenarios">
-  <div class="sec-title"><span>09</span>Escenarios Macro</div>
-  <div class="sc-layout">
-    <div id="sc-cards"></div>
-    <div>
+  <div class="sec-title"><span>09</span>Escenarios Macro &amp; Asset Allocation</div>
+  <div style="font-size:12px;color:var(--text3);margin-bottom:20px;line-height:1.6">
+    Probabilidades calculadas automáticamente según indicadores de mercado. Ajusta los sliders para ver el asset allocation resultante vs el benchmark (50% Bolsa · 20% RF · 20% USD · 5% Oro · Duración 4).
+  </div>
+
+  <!-- TOP: scenario cards with sliders -->
+  <div id="sc-cards" style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:24px"></div>
+
+  <!-- BOTTOM: allocation + donut per scenario -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <!-- Left: AA vs BMK bars -->
+    <div class="chart-panel">
+      <div class="cp-title">Asset Allocation resultante vs Benchmark</div>
+      <div id="sc-aa-bars"></div>
+    </div>
+    <!-- Right: donut + strategies -->
+    <div style="display:flex;flex-direction:column;gap:16px">
       <div class="chart-panel">
-        <div class="cp-title">Asset Allocation Resultante</div>
-        <div class="chart-wrap" style="height:220px"><canvas id="sc-donut"></canvas></div>
-        <div id="sc-aa" style="margin-top:16px;display:flex;flex-direction:column;gap:6px"></div>
+        <div class="cp-title">Exposición ponderada por escenario</div>
+        <div class="chart-wrap" style="height:200px"><canvas id="sc-donut"></canvas></div>
+      </div>
+      <div class="chart-panel" id="sc-strategies">
+        <div class="cp-title">Estrategias destacadas</div>
+        <div id="sc-strat-content"></div>
       </div>
     </div>
   </div>
@@ -1933,81 +1949,203 @@ function renderFG() {
 // ============================================================
 // ESCENARIOS
 // ============================================================
+
 const SCENARIOS = [
-  { id:'soft',   name:'Aterrizaje Suave',    base:40, color:'#22c55e', desc:'Inflación se modera sin recesión. Tipos bajan gradualmente. Favorable para renta variable y crédito.' },
-  { id:'hard',   name:'Aterrizaje Duro',     base:20, color:'#ef4444', desc:'Desaceleración pronunciada. Beneficios empresariales caen. Risk-off generalizado.' },
-  { id:'noland', name:'No Landing',          base:25, color:'#f59e0b', desc:'Economía sigue caliente, inflación persistente. Tipos altos por más tiempo. Presión en múltiplos.' },
-  { id:'stagfl', name:'Estanflación',         base:10, color:'#a78bfa', desc:'Bajo crecimiento + inflación alta. Peor escenario para activos financieros.' },
-  { id:'reaccel',name:'Reaceleración',        base:5,  color:'#2dd4bf', desc:'Sorpresa positiva de crecimiento. Bancos centrales deben frenar bajadas de tipos.' },
+  {
+    id:'recesion', name:'Recesión', base:20, color:'#ef4444',
+    icon:'📉',
+    def:'Contracción económica significativa. Caída de beneficios empresariales, aumento del desempleo y desapalancamiento. Bancos centrales recortan tipos agresivamente. Vuelo hacia activos seguros.',
+    signals:['Curva invertida prolongada','ISM < 45','Desempleo al alza','Spreads HY > 500pb'],
+    strategies:[
+      { type:'buy', label:'Compra de volatilidad (VIX)', desc:'Entornos de recesión generan picos de volatilidad implícita' },
+      { type:'buy', label:'Aplanamiento / inversión de pendiente', desc:'Comprar vencimientos largos vs vender cortos — apuesta a bajada de tipos y aplanamiento' },
+      { type:'sell', label:'Reducir crédito HY', desc:'Spreads tienden a ampliarse significativamente' },
+    ],
+  },
+  {
+    id:'crecimiento', name:'Crecimiento', base:35, color:'#22c55e',
+    icon:'🚀',
+    def:'Expansión económica sólida con inflación controlada. Beneficios empresariales al alza, mercado laboral fuerte. Ciclo alcista favorable para activos de riesgo.',
+    signals:['PMI > 55','Beneficios creciendo','Curva con pendiente positiva','VIX < 15'],
+    strategies:[
+      { type:'sell', label:'Venta de volatilidad', desc:'VIX bajo y estable — prima por vender opciones es atractiva' },
+      { type:'buy', label:'Empinamiento de pendiente (steepener)', desc:'Tipos largos suben más que cortos con el crecimiento — apostar a mayor pendiente' },
+      { type:'buy', label:'Crédito con riesgo (HY/IG)', desc:'Spreads se comprimen en entornos de crecimiento' },
+    ],
+  },
+  {
+    id:'madurez', name:'Ciclo Maduro', base:30, color:'#0085CA',
+    icon:'⚖️',
+    def:'Crecimiento moderado con inflación estabilizada. Final de ciclo expansivo. Los bancos centrales mantienen tipos estables o hacen ajustes menores. Dispersión sectorial creciente.',
+    signals:['PMI 50-55','Inflación en objetivo','Curva plana','Beneficios moderados'],
+    strategies:[
+      { type:'sell', label:'Venta de volatilidad selectiva', desc:'Volatilidad baja en activos defensivos con buena prima temporal' },
+      { type:'buy', label:'Empinamiento moderado', desc:'La curva puede tender a normalizarse desde posiciones planas' },
+      { type:'neutral', label:'Crédito IG neutral', desc:'Spreads estables — mantener posiciones sin tomar riesgo adicional' },
+    ],
+  },
+  {
+    id:'stagfl', name:'Estanflación', base:15, color:'#a78bfa',
+    icon:'⚠️',
+    def:'Bajo crecimiento combinado con inflación persistente. Escenario difícil para bancos centrales: no pueden recortar por inflación ni subir por crecimiento débil. Peor escenario para activos financieros convencionales.',
+    signals:['PIB < 1%','Inflación > 4%','Márgenes empresariales comprimidos','Commodities al alza'],
+    strategies:[
+      { type:'buy', label:'Compra de volatilidad', desc:'Incertidumbre elevada — volatilidad implícita cotiza barata vs realizada' },
+      { type:'buy', label:'Aplanamiento de pendiente', desc:'Tipos cortos anclados por crecimiento débil, largos presionados por inflación' },
+      { type:'buy', label:'Oro y materias primas', desc:'Activos reales como cobertura contra inflación persistente' },
+    ],
+  },
 ];
 
-const AA_BASE = {
-  soft:   { 'RV Desarrollados':40,'RV Emergentes':10,'RF Gobierno':20,'RF Crédito IG':15,'Crédito HY':10,'Materias Primas':5 },
-  hard:   { 'RV Desarrollados':20,'RV Emergentes':5, 'RF Gobierno':40,'RF Crédito IG':20,'Crédito HY':5, 'Materias Primas':10},
-  noland: { 'RV Desarrollados':35,'RV Emergentes':10,'RF Gobierno':10,'RF Crédito IG':15,'Crédito HY':15,'Materias Primas':15},
-  stagfl: { 'RV Desarrollados':15,'RV Emergentes':10,'RF Gobierno':25,'RF Crédito IG':10,'Crédito HY':5, 'Materias Primas':35},
-  reaccel:{ 'RV Desarrollados':45,'RV Emergentes':15,'RF Gobierno':10,'RF Crédito IG':10,'Crédito HY':10,'Materias Primas':10},
+// BMK: 50% Bolsa / 20% RF / 20% USD / 5% Oro / Dur 4
+const BMK = { 'Bolsa':50, 'RF Gobierno':10, 'RF Crédito':10, 'USD/Cash':20, 'Oro':5, 'Otros':5 };
+
+// AA por escenario — rangos representados por punto medio
+const AA_SC = {
+  recesion:   { 'Bolsa':20,  'RF Gobierno':35, 'RF Crédito':8,  'USD/Cash':30, 'Oro':7,  'Otros':0  },
+  crecimiento:{ 'Bolsa':90,  'RF Gobierno':0,  'RF Crédito':15, 'USD/Cash':10, 'Oro':3,  'Otros':-18 },
+  madurez:    { 'Bolsa':60,  'RF Gobierno':15, 'RF Crédito':10, 'USD/Cash':10, 'Oro':5,  'Otros':0  },
+  stagfl:     { 'Bolsa':35,  'RF Gobierno':10, 'RF Crédito':5,  'USD/Cash':25, 'Oro':15, 'Otros':10 },
 };
-const AA_COLORS = ['#3b82f6','#22c55e','#f59e0b','#a78bfa','#ef4444','#2dd4bf'];
+
+// AA ranges text
+const AA_RANGES = {
+  recesion:   { 'Bolsa':'10-30%', 'RF Gobierno':'30-40%', 'RF Crédito':'5-10%', 'USD/Cash':'35-45%', 'Oro':'7%', 'Dur':'6-7' },
+  crecimiento:{ 'Bolsa':'80-100%','RF Gobierno':'0-5%',   'RF Crédito':'10-20%','USD/Cash':'10-20%', 'Oro':'3%', 'Dur':'4'   },
+  madurez:    { 'Bolsa':'50-70%', 'RF Gobierno':'10-20%', 'RF Crédito':'8-12%', 'USD/Cash':'8-12%',  'Oro':'5%', 'Dur':'5'   },
+  stagfl:     { 'Bolsa':'30-40%', 'RF Gobierno':'8-12%',  'RF Crédito':'3-7%',  'USD/Cash':'20-30%', 'Oro':'10-20%','Dur':'4' },
+};
+
+const AA_ASSETS  = ['Bolsa','RF Gobierno','RF Crédito','USD/Cash','Oro'];
+const AA_COLORS  = ['#0085CA','#22c55e','#2dd4bf','#f59e0b','#e8b94f'];
 
 let scProbs = Object.fromEntries(SCENARIOS.map(s=>[s.id, s.base]));
 
 function renderEscenarios() {
   const cardsEl = document.getElementById('sc-cards');
-  cardsEl.innerHTML = SCENARIOS.map(sc => `
-    <div class="sc-card">
-      <div class="sc-card-top">
-        <div class="sc-card-name">${sc.name}</div>
-        <div class="sc-card-prob" style="color:${sc.color}" id="scv-${sc.id}">${scProbs[sc.id]}%</div>
+  cardsEl.innerHTML = SCENARIOS.map(sc => {
+    const total = Object.values(scProbs).reduce((a,b)=>a+b, 0);
+    const pct = total > 0 ? Math.round(scProbs[sc.id] / total * 100) : 0;
+    const ranges = AA_RANGES[sc.id];
+    return `<div style="background:var(--bg2);border:1px solid var(--border);border-left:4px solid ${sc.color};border-radius:8px;padding:16px;box-shadow:0 1px 3px rgba(6,45,63,0.06)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:18px">${sc.icon}</span>
+          <span style="font-size:13px;font-weight:700;color:var(--text1)">${sc.name}</span>
+        </div>
+        <div style="font-family:var(--mono);font-size:18px;font-weight:700;color:${sc.color}" id="scv-${sc.id}">${pct}%</div>
       </div>
-      <input type="range" class="sc-slider" min="0" max="100" value="${scProbs[sc.id]}"
-        oninput="updateScenario('${sc.id}',+this.value,this)"
-        style="accent-color:${sc.color}">
-      <div class="sc-desc">${sc.desc}</div>
-    </div>`).join('');
+      <input type="range" style="width:100%;appearance:none;height:4px;border-radius:2px;background:var(--bg4);outline:none;cursor:pointer;accent-color:${sc.color};margin-bottom:10px"
+        min="0" max="100" value="${scProbs[sc.id]}" oninput="updateScenario('${sc.id}',+this.value)">
+      <div style="font-size:11px;color:var(--text3);line-height:1.5;margin-bottom:10px">${sc.def}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px">
+        ${sc.signals.map(s=>`<span style="font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:3px;background:rgba(6,45,63,0.06);color:var(--text3)">${s}</span>`).join('')}
+      </div>
+      <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border)">
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:0.08em;margin-bottom:6px">ASIGNACIÓN</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <span style="font-family:var(--mono);font-size:10px;color:var(--blue)">📊 Bolsa ${ranges['Bolsa']}</span>
+          <span style="font-family:var(--mono);font-size:10px;color:var(--text2)">💵 USD ${ranges['USD/Cash']}</span>
+          <span style="font-family:var(--mono);font-size:10px;color:var(--green)">🏦 Dur ${ranges['Dur']}</span>
+          <span style="font-family:var(--mono);font-size:10px;color:#e8b94f">🥇 Oro ${ranges['Oro']}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
 
   updateAAChart();
 }
 
-function updateScenario(id, val, slider) {
-  scProbs[id] = val;
-  document.getElementById('scv-'+id).textContent = val+'%';
-  updateAAChart();
+function updateScenario(id, val) {
+  scProbs[id] = +val;
+  renderEscenarios();
 }
 
 function updateAAChart() {
-  const total = Object.values(scProbs).reduce((a,b)=>a+b,0);
+  const total = Object.values(scProbs).reduce((a,b)=>a+b, 0);
   if (!total) return;
 
   // Weighted AA
   const aa = {};
+  AA_ASSETS.forEach(a => aa[a] = 0);
   SCENARIOS.forEach(sc => {
-    const w = scProbs[sc.id]/total;
-    Object.entries(AA_BASE[sc.id]).forEach(([asset, pct]) => {
-      aa[asset] = (aa[asset]||0) + pct*w;
-    });
+    const w = scProbs[sc.id] / total;
+    const scAA = AA_SC[sc.id];
+    AA_ASSETS.forEach(a => { aa[a] += (scAA[a] || 0) * w; });
   });
 
-  const labels = Object.keys(aa);
-  const values = labels.map(l=>+aa[l].toFixed(1));
+  // Clamp to reasonable range
+  AA_ASSETS.forEach(a => { aa[a] = Math.max(0, Math.min(100, +aa[a].toFixed(1))); });
 
+  // Donut
   destroyChart('sc-donut');
   const ctx = document.getElementById('sc-donut');
-  if (!ctx) return;
-  charts['sc-donut'] = new Chart(ctx.getContext('2d'), {
-    type:'doughnut',
-    data:{ labels, datasets:[{ data:values, backgroundColor:AA_COLORS.map(c=>c+'cc'), borderColor:'#0a0e17', borderWidth:2 }] },
-    options:{ responsive:true, maintainAspectRatio:false, animation:{duration:300},
-      plugins:{ legend:{ display:true, position:'right', labels:{color:'#2a5a72',font:{size:10,family:'IBM Plex Mono'},boxWidth:12} }, tooltip:{ backgroundColor:'#f0f4f7',bodyColor:'#062D3F',callbacks:{ label:ctx=>` ${ctx.label}: ${ctx.parsed.toFixed(1)}%` } } }
-    },
-  });
+  if (ctx) {
+    charts['sc-donut'] = new Chart(ctx.getContext('2d'), {
+      type:'doughnut',
+      data:{ labels:AA_ASSETS, datasets:[{ data:AA_ASSETS.map(a=>aa[a]), backgroundColor:AA_COLORS.map(c=>c+'cc'), borderColor:'#ffffff', borderWidth:2 }] },
+      options:{ responsive:true, maintainAspectRatio:false, animation:{duration:300},
+        plugins:{ legend:{ display:true, position:'right', labels:{color:'#2a5a72',font:{size:10,family:'IBM Plex Mono'},boxWidth:10,padding:8} },
+          tooltip:{ backgroundColor:'#062D3F', bodyColor:'#fff', callbacks:{ label:ctx=>` ${ctx.label}: ${ctx.parsed.toFixed(1)}%` } } }
+      },
+    });
+  }
 
-  document.getElementById('sc-aa').innerHTML = labels.map((l,i)=>
-    `<div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;padding:4px 0;border-bottom:1px solid var(--border);">
-      <span style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:2px;background:${AA_COLORS[i]};display:inline-block"></span><span style="color:var(--text2)">${l}</span></span>
-      <span style="color:var(--text1);font-weight:500">${values[i].toFixed(1)}%</span>
-    </div>`
-  ).join('');
+  // AA vs BMK bars
+  const barsEl = document.getElementById('sc-aa-bars');
+  if (!barsEl) return;
+
+  const posColor = '#1a7a3c', negColor = '#c0392b', neutColor = '#0085CA';
+  barsEl.innerHTML = AA_ASSETS.map((asset, i) => {
+    const aaVal  = aa[asset];
+    const bmkVal = BMK[asset] || 0;
+    const diff   = +(aaVal - bmkVal).toFixed(1);
+    const signal = diff > 3 ? 'SOBREPONDERADO' : diff < -3 ? 'INFRAPONDERADO' : 'NEUTRAL';
+    const sigColor = diff > 3 ? posColor : diff < -3 ? negColor : neutColor;
+    const sigBg    = diff > 3 ? 'rgba(26,122,60,0.1)' : diff < -3 ? 'rgba(192,57,43,0.1)' : 'rgba(0,133,202,0.1)';
+    const maxVal = Math.max(aaVal, bmkVal, 5);
+
+    return `<div style="margin-bottom:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="width:8px;height:8px;border-radius:2px;background:${AA_COLORS[i]};display:inline-block"></span>
+          <span style="font-size:12px;font-weight:600;color:var(--text1)">${asset}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-family:var(--mono);font-size:11px;color:var(--text3)">BMK ${bmkVal}%</span>
+          <span style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--text1)">${aaVal.toFixed(1)}%</span>
+          <span style="font-family:var(--mono);font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;background:${sigBg};color:${sigColor}">${signal}</span>
+        </div>
+      </div>
+      <div style="position:relative;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden">
+        <div style="position:absolute;top:0;left:0;height:100%;width:${(bmkVal/maxVal*100).toFixed(0)}%;background:rgba(6,45,63,0.2);border-radius:3px"></div>
+        <div style="position:absolute;top:0;left:0;height:100%;width:${(aaVal/maxVal*100).toFixed(0)}%;background:${AA_COLORS[i]};border-radius:3px;transition:width .4s"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:9px;color:var(--text3);margin-top:2px">
+        <span>0%</span><span style="color:${sigColor}">${diff>0?'+':''}${diff}% vs BMK</span><span>${maxVal.toFixed(0)}%</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Strategies for dominant scenario
+  const domId = Object.entries(scProbs).sort((a,b)=>b[1]-a[1])[0][0];
+  const domSc  = SCENARIOS.find(s=>s.id===domId);
+  const stratEl = document.getElementById('sc-strat-content');
+  if (stratEl && domSc) {
+    const typeIcon = { buy:'🟢', sell:'🔵', neutral:'⚪' };
+    stratEl.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:10px">Escenario dominante: <strong style="color:${domSc.color}">${domSc.icon} ${domSc.name}</strong></div>` +
+      domSc.strategies.map(s => `<div style="padding:8px 0;border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+          <span>${typeIcon[s.type]}</span>
+          <span style="font-size:12px;font-weight:600;color:var(--text1)">${s.label}</span>
+        </div>
+        <div style="font-size:11px;color:var(--text3);padding-left:20px">${s.desc}</div>
+      </div>`).join('') +
+      `<div style="margin-top:10px;padding:8px;background:rgba(0,133,202,0.06);border-radius:6px;border-left:3px solid var(--blue)">
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:0.08em;margin-bottom:4px">LEYENDA ESTRATEGIAS</div>
+        <div style="font-size:10px;color:var(--text3);line-height:1.8">🟢 Estrategias recomendadas · 🔵 Estrategias de libro · ⚪ Posición neutral</div>
+      </div>`;
+  }
 }
 
 // ============================================================
