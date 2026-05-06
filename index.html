@@ -788,7 +788,7 @@ function parseDate(cell) {
 }
 
 function parseSheet(sheet, mapObj) {
-  const rows = XLSX.utils.sheet_to_json(sheet, { header:1, defval:null, raw:false, cellDates:true });
+  const rows = XLSX.utils.sheet_to_json(sheet, { header:1, defval:null, raw:true, cellDates:true });
   if (!rows || rows.length < 3) return {};
 
   // Find ticker row
@@ -911,7 +911,7 @@ function loadExcel(file) {
         // VALORACIÓN — estructura diferente: tickers en fila 3 (sin col vacía), fecha en col par, valor en col impar
         const valSheet = wb.Sheets['valoración valores'];
         if (valSheet) {
-          const rows = XLSX.utils.sheet_to_json(valSheet, { header:1, defval:null, raw:false, cellDates:true });
+          const rows = XLSX.utils.sheet_to_json(valSheet, { header:1, defval:null, raw:true, cellDates:true });
           // Find ticker row
           let tickerRow = null, tickerIdx = -1;
           for (let i=0; i<Math.min(rows.length,6); i++) {
