@@ -2247,7 +2247,13 @@ function renderEscenarios() {
 
 function updateScenario(id, val) {
   scProbs[id] = +val;
-  renderEscenarios();
+  // Update just the percentage labels without re-rendering cards
+  const total = Object.values(scProbs).reduce((a,b)=>a+b, 0);
+  SCENARIOS.forEach(sc => {
+    const el = document.getElementById('scv-'+sc.id);
+    if (el) el.textContent = total > 0 ? Math.round(scProbs[sc.id]/total*100)+'%' : '0%';
+  });
+  updateAAChart();
 }
 
 function updateAAChart() {
