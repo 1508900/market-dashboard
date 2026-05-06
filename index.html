@@ -2047,23 +2047,11 @@ function renderAll() {
 }
 
 // ============================================================
+// ============================================================
 // UPLOAD UI
 // ============================================================
 function openUpload() { document.getElementById('upload-overlay').classList.add('open'); }
 function closeUpload() { document.getElementById('upload-overlay').classList.remove('open'); }
-
-document.getElementById('file-input').addEventListener('change', async e => {
-  const file = e.target.files[0]; if (!file) return;
-  await processFile(file);
-});
-
-const dz = document.getElementById('drop-zone');
-dz.addEventListener('dragover', e=>{ e.preventDefault(); dz.classList.add('over'); });
-dz.addEventListener('dragleave', ()=>dz.classList.remove('over'));
-dz.addEventListener('drop', async e=>{
-  e.preventDefault(); dz.classList.remove('over');
-  const file = e.dataTransfer.files[0]; if(file) await processFile(file);
-});
 
 async function processFile(file) {
   const st = document.getElementById('upload-status');
@@ -2076,7 +2064,7 @@ async function processFile(file) {
     const tipoCount= Object.keys(D.tipos).length;
     const spCount  = Object.keys(D.spreads).length;
     st.style.color = 'var(--green)';
-    st.textContent = `✓ ${idxCount} índices · ${mmCount} materias primas · ${tipoCount} tipos · ${spCount} spreads`;
+    st.textContent = `✓ ${idxCount} índices · ${mmCount} mat. primas · ${tipoCount} tipos · ${spCount} spreads`;
 
     // Update header
     const dot = document.getElementById('status-dot');
@@ -2141,6 +2129,21 @@ async function autoLoadExcel() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  // File input change
+  document.getElementById('file-input').addEventListener('change', async e => {
+    const file = e.target.files[0]; if (!file) return;
+    await processFile(file);
+  });
+
+  // Drag & drop
+  const dz = document.getElementById('drop-zone');
+  dz.addEventListener('dragover', e=>{ e.preventDefault(); dz.classList.add('over'); });
+  dz.addEventListener('dragleave', ()=>dz.classList.remove('over'));
+  dz.addEventListener('drop', async e=>{
+    e.preventDefault(); dz.classList.remove('over');
+    const file = e.dataTransfer.files[0]; if(file) await processFile(file);
+  });
+
   renderFG();
   renderEscenarios();
   openUpload();
