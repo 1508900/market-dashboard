@@ -849,7 +849,6 @@ function parseSheet(sheet, mapObj) {
   const rows = XLSX.utils.sheet_to_json(sheet, { header:1, defval:null, raw:true, cellDates:true });
   if (!rows || rows.length < 3) return {};
 
-  // Find ticker row
   let tickerRow = null, tickerIdx = -1;
   for (let i = 0; i < Math.min(rows.length, 8); i++) {
     if (rows[i] && rows[i].some(c => typeof c === 'string' && mapObj[c.trim()])) {
@@ -858,10 +857,22 @@ function parseSheet(sheet, mapObj) {
   }
   if (!tickerRow) return {};
 
-  // Map col → ticker info
   const colMap = {};
   tickerRow.forEach((cell, col) => {
     if (typeof cell === 'string' && mapObj[cell.trim()]) colMap[col] = cell.trim();
+  });
+
+  // Auto-detect if value is at col+1 or col-1 (BBG slope format)
+  const sampleRows = rows.slice(tickerIdx + 1, tickerIdx + 10).filter(Boolean);
+  const valueOffsets = {};
+  Object.keys(colMap).forEach(colStr => {
+    const col = +colStr;
+    let posCount = 0, negCount = 0;
+    sampleRows.forEach(row => {
+      if (typeof row[col + 1] === 'number') posCount++;
+      if (typeof row[col - 1] === 'number') negCount++;
+    });
+    valueOffsets[col] = (negCount > posCount) ? -1 : 1;
   });
 
   const result = {};
@@ -872,8 +883,9 @@ function parseSheet(sheet, mapObj) {
     if (!row) continue;
     Object.entries(colMap).forEach(([colStr, ticker]) => {
       const col = +colStr;
+      const offset = valueOffsets[col] || 1;
       const d = parseDate(row[col]);
-      const v = row[col + 1];
+      const v = row[col + offset];
       if (!d) return;
       const num = typeof v === 'number' ? v : (typeof v === 'string' ? parseFloat(v) : null);
       if (num === null || isNaN(num)) return;
@@ -882,7 +894,6 @@ function parseSheet(sheet, mapObj) {
     });
   }
 
-  // Remove empty
   Object.keys(result).forEach(k => { if (!result[k].dates.length) delete result[k]; });
   return result;
 }
@@ -2185,18 +2196,16 @@ const SCENARIOS = [
 
 // BMK: 50% Bolsa / 20% RF / 20% USD / 5% Oro / Dur 4
 // BMK: 50% Bolsa / 20% RF / 20% USD / 5% Oro / Dur 4
-const BMK = { 'Bolsa':50, 'RF Gobierno':15, 'RF Crédito':10, 'USD':20, 'Oro':5 };
+// BMK: 50% Bolsa / 25% RF Gob / 20% RF Cred / 5% Oro (USD y Dur son parámetros)
+const BMK = { 'Bolsa':50, 'RF Gobierno':25, 'RF Crédito':20, 'Oro':5 };
 
 // AA por escenario — rangos representados por punto medio
 const AA_SC = {
-  // Recesión: bolsa 20, USD 40, Oro 7 → RF = 33 (28 Gob + 5 Cred, poco crédito)
-  recesion:   { 'Bolsa':20,  'RF Gobierno':28, 'RF Crédito':5,  'USD':40, 'Oro':7  },
-  // Crecimiento: bolsa 80, USD 14, Oro 3, RF Cred 3 → suma 100
-  crecimiento:{ 'Bolsa':80,  'RF Gobierno':0,  'RF Crédito':3,  'USD':14, 'Oro':3  },
-  // Madurez: bolsa 60, USD 10, Oro 5 → RF = 25 (neutral: 12 Gob + 13 Cred)
-  madurez:    { 'Bolsa':60,  'RF Gobierno':12, 'RF Crédito':13, 'USD':10, 'Oro':5  },
-  // Estanflación: bolsa 35, USD 25, Oro 5 → RF = 35 (sesgo tipos: 30 Gob + 5 Cred)
-  stagfl:     { 'Bolsa':35,  'RF Gobierno':30, 'RF Crédito':5,  'USD':25, 'Oro':5  },
+  // 100% = Bolsa + RF Gobierno + RF Crédito + Oro. USD y Duración son informativos.
+  recesion:   { 'Bolsa':20, 'RF Gobierno':66, 'RF Crédito':5,  'Oro':7,  'Otros':2,  USD_info:40, Dur_info:6.5 },
+  crecimiento:{ 'Bolsa':90, 'RF Gobierno':0,  'RF Crédito':7,  'Oro':3,  'Otros':0,  USD_info:15, Dur_info:4   },
+  madurez:    { 'Bolsa':60, 'RF Gobierno':20, 'RF Crédito':15, 'Oro':5,  'Otros':0,  USD_info:10, Dur_info:5   },
+  stagfl:     { 'Bolsa':35, 'RF Gobierno':55, 'RF Crédito':5,  'Oro':5,  'Otros':0,  USD_info:25, Dur_info:4   },
 };
 
 // AA ranges text
@@ -2207,8 +2216,8 @@ const AA_RANGES = {
   stagfl:     { 'Bolsa':'30-40%', 'RF Gobierno':'25-35%', 'RF Crédito':'3-7%',  'USD':'25%',    'Oro':'5%', 'Dur':'4'   },
 };
 
-const AA_ASSETS  = ['Bolsa','RF Gobierno','RF Crédito','USD','Oro'];
-const AA_COLORS  = ['#0085CA','#22c55e','#2dd4bf','#f59e0b','#e8b94f'];
+const AA_ASSETS  = ['Bolsa','RF Gobierno','RF Crédito','Oro'];
+const AA_COLORS  = ['#0085CA','#22c55e','#2dd4bf','#e8b94f'];
 
 let scProbs = Object.fromEntries(SCENARIOS.map(s=>[s.id, s.base]));
 
