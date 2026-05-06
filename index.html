@@ -333,23 +333,31 @@ canvas { display:block; }
 .corr-lbl { font-family:var(--mono); font-size:10px; }
 .corr-obs { font-family:var(--mono); font-size:10px; color:var(--text3); }
 
-/* GAUGE */
-.gauge-wrap { text-align:center; position:relative; margin:0 auto; width:220px; }
-.gauge-val { font-family:var(--mono); font-size:32px; font-weight:600; margin-top:-8px; }
-.gauge-lbl { font-family:var(--mono); font-size:11px; font-weight:500; margin-top:4px; }
-.fg-panels { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px; }
-.fg-panel { background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:24px; }
-.fg-title { font-family:var(--mono); font-size:10px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text3); margin-bottom:20px; }
-.fg-indicators { margin-top:16px; }
+/* FEAR & GREED — original styles */
+.fg-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px; }
+.fg-panel { background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:24px; box-shadow:0 1px 3px rgba(6,45,63,0.06); }
+.fg-title { font-family:var(--mono); font-size:10px; font-weight:600; letter-spacing:0.1em; text-transform:uppercase; color:var(--text3); margin-bottom:20px; }
+.gauge-wrap { text-align:center; position:relative; margin:0 auto; width:fit-content; }
+.gauge-value { font-family:var(--mono); font-size:32px; font-weight:700; color:var(--text1); margin-top:-8px; }
+.gauge-label { font-family:var(--mono); font-size:12px; font-weight:600; margin-top:4px; }
+.fg-indicators { margin-top:20px; }
 .fg-ind { padding:10px 0; border-bottom:1px solid var(--border); }
 .fg-ind:last-child { border-bottom:none; }
-.fg-ind-top { display:flex; align-items:center; gap:8px; }
-.fg-ind-name { font-size:12px; color:var(--text2); flex:1; }
-.fg-ind-val { font-family:var(--mono); font-size:11px; color:var(--text1); }
-.fg-sig { font-family:var(--mono); font-size:10px; font-weight:600; padding:2px 6px; border-radius:3px; }
-.sig-bull { background:rgba(34,197,94,0.15); color:var(--green); }
-.sig-bear { background:rgba(239,68,68,0.15); color:var(--red); }
-.sig-neut { background:rgba(148,163,196,0.1); color:var(--text3); }
+.fg-ind-top { display:flex; align-items:center; gap:8px; margin-bottom:4px; }
+.fg-ind-name { font-size:12px; color:var(--text2); flex:1; font-weight:500; }
+.fg-ind-val { font-family:var(--mono); font-size:11px; color:var(--text1); font-weight:600; }
+.fg-ind-signal { font-family:var(--mono); font-size:10px; font-weight:600; padding:2px 8px; border-radius:3px; }
+.fg-ind-desc { font-size:11px; color:var(--text3); line-height:1.5; }
+.sig-bullish { background:rgba(26,122,60,0.12); color:var(--green); }
+.sig-bearish { background:rgba(192,57,43,0.12); color:var(--red); }
+.sig-neutral { background:rgba(107,143,160,0.12); color:var(--text3); }
+.fg-legend { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:8px; }
+.leg { font-family:var(--mono); font-size:10px; padding:3px 12px; border-radius:4px; font-weight:500; }
+.leg.extreme-fear { background:rgba(192,57,43,0.12); color:#c0392b; }
+.leg.fear         { background:rgba(196,125,14,0.12); color:#c47d0e; }
+.leg.neutral      { background:rgba(107,143,160,0.12); color:var(--text3); }
+.leg.greed        { background:rgba(26,122,60,0.12); color:var(--green); }
+.leg.extreme-greed{ background:rgba(26,122,60,0.2); color:#155d2a; }
 
 /* SCENARIOS */
 .sc-layout { display:grid; grid-template-columns:1fr 380px; gap:20px; }
@@ -628,32 +636,34 @@ canvas { display:block; }
 <!-- FEAR & GREED -->
 <section class="section" id="sec-fg">
   <div class="sec-title"><span>08</span>Fear &amp; Greed Index</div>
-  <div class="fg-panels" id="fg-content">
+  <div class="fg-grid">
+    <!-- USA -->
     <div class="fg-panel">
-      <div class="fg-title">🇺🇸 Estados Unidos — S&amp;P 500</div>
+      <div class="fg-title">Estados Unidos — S&amp;P 500</div>
       <div class="gauge-wrap">
-        <canvas id="gauge-us" width="220" height="130"></canvas>
-        <div class="gauge-val" id="fg-us-val">—</div>
-        <div class="gauge-lbl" id="fg-us-lbl">—</div>
+        <canvas id="gauge-us" width="300" height="180"></canvas>
+        <div class="gauge-value" id="fg-us-val">—</div>
+        <div class="gauge-label" id="fg-us-label">—</div>
       </div>
-      <div class="fg-indicators" id="fg-us-inds"></div>
+      <div class="fg-indicators" id="fg-us-indicators"></div>
     </div>
+    <!-- EUROPE -->
     <div class="fg-panel">
-      <div class="fg-title">🇪🇺 Europa — Euro Stoxx 50</div>
+      <div class="fg-title">Europa — Euro Stoxx 50</div>
       <div class="gauge-wrap">
-        <canvas id="gauge-eu" width="220" height="130"></canvas>
-        <div class="gauge-val" id="fg-eu-val">—</div>
-        <div class="gauge-lbl" id="fg-eu-lbl">—</div>
+        <canvas id="gauge-eu" width="300" height="180"></canvas>
+        <div class="gauge-value" id="fg-eu-val">—</div>
+        <div class="gauge-label" id="fg-eu-label">—</div>
       </div>
-      <div class="fg-indicators" id="fg-eu-inds"></div>
+      <div class="fg-indicators" id="fg-eu-indicators"></div>
     </div>
   </div>
-  <div style="display:flex;gap:8px;justify-content:center;margin-top:8px;flex-wrap:wrap;">
-    <span style="font-family:var(--mono);font-size:10px;padding:3px 10px;border-radius:4px;background:rgba(239,68,68,0.15);color:var(--red)">0-20 Miedo Extremo</span>
-    <span style="font-family:var(--mono);font-size:10px;padding:3px 10px;border-radius:4px;background:rgba(249,115,22,0.15);color:#f97316">20-40 Miedo</span>
-    <span style="font-family:var(--mono);font-size:10px;padding:3px 10px;border-radius:4px;background:rgba(234,179,8,0.15);color:var(--gold)">40-60 Neutral</span>
-    <span style="font-family:var(--mono);font-size:10px;padding:3px 10px;border-radius:4px;background:rgba(34,197,94,0.15);color:var(--green)">60-80 Codicia</span>
-    <span style="font-family:var(--mono);font-size:10px;padding:3px 10px;border-radius:4px;background:rgba(34,197,94,0.25);color:#4ade80">80-100 Codicia Extrema</span>
+  <div class="fg-legend">
+    <span class="leg extreme-fear">0-20 Miedo Extremo</span>
+    <span class="leg fear">20-40 Miedo</span>
+    <span class="leg neutral">40-60 Neutral</span>
+    <span class="leg greed">60-80 Codicia</span>
+    <span class="leg extreme-greed">80-100 Codicia Extrema</span>
   </div>
 </section>
 
@@ -1723,91 +1733,168 @@ function renderVolatilidad() {
 }
 
 // ============================================================
-// FEAR & GREED
+// FEAR & GREED — lógica original
 // ============================================================
-function computeFG(ctx) {
-  function sc(val, breaks, scores) { for(let i=0;i<breaks.length;i++) if(val<breaks[i]) return scores[i]; return scores[scores.length-1]; }
-  const s1 = sc(ctx.vol_cur/ctx.vol_ma, [0.6,0.7,0.8,0.9,1.0,1.1,1.25,1.5],[92,82,72,62,52,42,30,18,8]);
-  const s2 = sc(ctx.ma125_pct,[8,5,3,1.5,0,-2,-5],[90,80,70,60,50,38,25,10]);
-  const s3 = sc(ctx.rsi,[72,65,58,50,42,35,28],[88,75,62,52,40,28,18,8]);
-  const s4 = sc(ctx.hy_ig,[150,180,210,240,270,310,370],[88,76,63,52,42,30,18,8]);
-  const s5 = sc(ctx.eq_bond,[8,5,2.5,0.5,-0.5,-2.5,-5],[90,78,65,55,45,33,20,8]);
-  const comp = Math.round(s1*.2+s2*.25+s3*.2+s4*.2+s5*.15);
-  return { comp: Math.min(100,Math.max(0,comp+Math.round((Math.random()-.5)*2))), s1,s2,s3,s4,s5 };
+const INDICATOR_DESCRIPTIONS = {
+  vol:    'Compara la volatilidad implícita actual (VIX/VSTOXX) con su media de 50 días. Por debajo de la media indica calma (codicia); por encima señala nerviosismo inversor (miedo).',
+  ma125:  'Mide si el índice cotiza por encima o por debajo de su media móvil de 125 días (~6 meses). Por encima refleja momentum alcista (codicia); por debajo indica deterioro de tendencia (miedo).',
+  rsi:    'Índice de Fuerza Relativa en 14 sesiones. Por encima de 65 señala sobrecompra (codicia). Por debajo de 35 indica sobreventa (miedo). La zona 40-60 es territorio neutral.',
+  spread: 'Diferencia entre los spreads del crédito High Yield y el Investment Grade. Un diferencial estrecho indica apetito por el riesgo (codicia). Diferencial amplio refleja aversión al riesgo (miedo).',
+  bond:   'Diferencia entre la rentabilidad en precio de la bolsa y el bono soberano a 10Y en las últimas 20 sesiones. Si la bolsa supera al bono, los inversores asumen riesgo (codicia). Si el bono sube más, hay huida hacia activos seguros (miedo).'
+};
+
+function scoreVol(current, avg50) {
+  const r = current / avg50;
+  if (r < 0.60) return 92; if (r < 0.70) return 82; if (r < 0.80) return 72;
+  if (r < 0.90) return 62; if (r < 1.00) return 52; if (r < 1.10) return 42;
+  if (r < 1.25) return 30; if (r < 1.50) return 18; return 8;
+}
+function scoreMa125(pct) {
+  if (pct >  8.0) return 90; if (pct >  5.0) return 80; if (pct >  3.0) return 70;
+  if (pct >  1.5) return 60; if (pct >  0.0) return 50; if (pct > -2.0) return 38;
+  if (pct > -5.0) return 25; return 10;
+}
+function scoreRsi(rsi) {
+  if (rsi > 72) return 88; if (rsi > 65) return 75; if (rsi > 58) return 62;
+  if (rsi > 50) return 52; if (rsi > 42) return 40; if (rsi > 35) return 28;
+  if (rsi > 28) return 18; return 8;
+}
+function scoreSpread(diff) {
+  if (diff < 150) return 88; if (diff < 180) return 76; if (diff < 210) return 63;
+  if (diff < 240) return 52; if (diff < 270) return 42; if (diff < 310) return 30;
+  if (diff < 370) return 18; return 8;
+}
+function scoreBondEquity(d) {
+  if (d >  8.0) return 90; if (d >  5.0) return 78; if (d >  2.5) return 65;
+  if (d >  0.5) return 55; if (d > -0.5) return 45; if (d > -2.5) return 33;
+  if (d > -5.0) return 20; return 8;
 }
 
-function fgInfo(score) {
-  if(score>=80) return {label:'Codicia Extrema',color:'#22c55e'};
-  if(score>=60) return {label:'Codicia',color:'#84cc16'};
-  if(score>=40) return {label:'Neutral',color:'var(--gold)'};
-  if(score>=20) return {label:'Miedo',color:'#f97316'};
-  return {label:'Miedo Extremo',color:'var(--red)'};
+function computeComposite(ctx) {
+  const s1 = scoreVol(ctx.vol_current, ctx.vol_avg50);
+  const s2 = scoreMa125(ctx.price_vs_ma125_pct);
+  const s3 = scoreRsi(ctx.rsi);
+  const s4 = scoreSpread(ctx.hy_ig_diff);
+  const s5 = scoreBondEquity(ctx.equity_bond_20d);
+  return {
+    composite: Math.round(s1*0.20 + s2*0.25 + s3*0.20 + s4*0.20 + s5*0.15),
+    s1, s2, s3, s4, s5
+  };
 }
 
-function drawGauge(id, score) {
-  const canvas = document.getElementById(id);
-  if(!canvas) return;
+function fgLabel(score) {
+  if (score >= 80) return { label: 'Codicia Extrema', color: '#22c55e' };
+  if (score >= 60) return { label: 'Codicia',         color: '#84cc16' };
+  if (score >= 40) return { label: 'Neutral',         color: '#e67e22' };
+  if (score >= 20) return { label: 'Miedo',           color: '#f97316' };
+  return                   { label: 'Miedo Extremo',  color: '#ef4444' };
+}
+
+function signalFromScore(score) {
+  if (score >= 60) return { label: 'Alcista',  cls: 'sig-bullish' };
+  if (score >= 40) return { label: 'Neutral',  cls: 'sig-neutral' };
+  return                   { label: 'Bajista', cls: 'sig-bearish' };
+}
+
+function drawGauge(canvasId, score) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
   const ctx = canvas.getContext('2d');
-  const W=canvas.width, H=canvas.height;
-  ctx.clearRect(0,0,W,H);
-  const cx=W/2, cy=H*.88, r=H*.74;
-  const zones=[{f:0,t:20,c:'#ef4444'},{f:20,t:40,c:'#f97316'},{f:40,t:60,c:'#eab308'},{f:60,t:80,c:'#84cc16'},{f:80,t:100,c:'#22c55e'}];
-  zones.forEach(z=>{
-    ctx.beginPath(); ctx.arc(cx,cy,r,Math.PI+(z.f/100)*Math.PI,Math.PI+(z.t/100)*Math.PI);
-    ctx.strokeStyle=z.c+'33'; ctx.lineWidth=18; ctx.stroke();
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  const cx = W/2, cy = H*0.88, r = H*0.74;
+
+  ctx.beginPath(); ctx.arc(cx, cy, r, Math.PI, 2*Math.PI);
+  ctx.strokeStyle = 'rgba(6,45,63,0.08)'; ctx.lineWidth = 20; ctx.lineCap = 'butt'; ctx.stroke();
+
+  const zones = [{from:0,to:20,color:'#ef4444'},{from:20,to:40,color:'#f97316'},
+                 {from:40,to:60,color:'#eab308'},{from:60,to:80,color:'#84cc16'},{from:80,to:100,color:'#22c55e'}];
+  zones.forEach(z => {
+    ctx.beginPath(); ctx.arc(cx, cy, r, Math.PI+(z.from/100)*Math.PI, Math.PI+(z.to/100)*Math.PI);
+    ctx.strokeStyle = z.color+'44'; ctx.lineWidth = 20; ctx.stroke();
   });
-  const info=fgInfo(score), sa=Math.PI+(score/100)*Math.PI;
-  ctx.beginPath(); ctx.arc(cx,cy,r,Math.PI,sa);
-  ctx.strokeStyle=info.color; ctx.lineWidth=18; ctx.lineCap='round'; ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+r*.7*Math.cos(sa),cy+r*.7*Math.sin(sa));
-  ctx.strokeStyle='#e2e8f4'; ctx.lineWidth=2; ctx.lineCap='round'; ctx.stroke();
-  ctx.beginPath(); ctx.arc(cx,cy,5,0,Math.PI*2); ctx.fillStyle='#e2e8f4'; ctx.fill();
-  ctx.font='9px IBM Plex Mono'; ctx.fillStyle='#4f6080'; ctx.textAlign='center';
-  ctx.fillText('0',cx-r-8,cy+12); ctx.fillText('50',cx,cy-r-8); ctx.fillText('100',cx+r+10,cy+12);
+
+  const info = fgLabel(score);
+  const sa = Math.PI+(score/100)*Math.PI;
+  ctx.beginPath(); ctx.arc(cx, cy, r, Math.PI, sa);
+  ctx.strokeStyle = info.color; ctx.lineWidth = 20; ctx.lineCap = 'round'; ctx.stroke();
+
+  ctx.beginPath(); ctx.moveTo(cx, cy);
+  ctx.lineTo(cx+r*0.70*Math.cos(sa), cy+r*0.70*Math.sin(sa));
+  ctx.strokeStyle = '#062D3F'; ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.stroke();
+
+  ctx.beginPath(); ctx.arc(cx, cy, 6, 0, Math.PI*2); ctx.fillStyle = '#062D3F'; ctx.fill();
+
+  ctx.font = '9px IBM Plex Sans, sans-serif'; ctx.fillStyle = '#6b8fa0'; ctx.textAlign = 'center';
+  ctx.fillText('0', cx-r-10, cy+14); ctx.fillText('50', cx, cy-r-10); ctx.fillText('100', cx+r+12, cy+14);
+}
+
+function buildFGIndicators(scores, ctx) {
+  return [
+    { name:'Volatilidad vs media 50d', value:ctx.vol_current.toFixed(1)+' vs '+ctx.vol_avg50.toFixed(1), score:scores.s1, desc:INDICATOR_DESCRIPTIONS.vol },
+    { name:'Índice vs media 125d',     value:(ctx.price_vs_ma125_pct>=0?'+':'')+ctx.price_vs_ma125_pct.toFixed(1)+'%', score:scores.s2, desc:INDICATOR_DESCRIPTIONS.ma125 },
+    { name:'RSI 14 días',              value:ctx.rsi.toFixed(1), score:scores.s3, desc:INDICATOR_DESCRIPTIONS.rsi },
+    { name:'Diferencial HY - IG',      value:ctx.hy_ig_diff+' pb', score:scores.s4, desc:INDICATOR_DESCRIPTIONS.spread },
+    { name:'Bolsa vs Bono 10Y (20d)',   value:(ctx.equity_bond_20d>=0?'+':'')+ctx.equity_bond_20d.toFixed(1)+'%', score:scores.s5, desc:INDICATOR_DESCRIPTIONS.bond },
+  ];
+}
+
+function renderFGIndicatorHTML(ind) {
+  const sig = signalFromScore(ind.score);
+  return `<div class="fg-ind">
+    <div class="fg-ind-top">
+      <span class="fg-ind-name">${ind.name}</span>
+      <span class="fg-ind-val">${ind.value}</span>
+      <span class="fg-ind-signal ${sig.cls}">${sig.label}</span>
+    </div>
+    <div class="fg-ind-desc">${ind.desc}</div>
+  </div>`;
 }
 
 function renderFG() {
-  // Dynamic context from loaded data
+  // Build context from loaded data
   const vix = D.bolsa['vix'];
-  const vixPrice = vix ? vix.price : 17.2;
-  const vixMA = vix && vix.closes.length >= 50 ? vix.closes.slice(-50).reduce((a,b)=>a+b)/50 : vixPrice*1.1;
+  const v2x = D.bolsa['v2x'];
   const spx = D.bolsa['spx'];
-  const spxMa125Pct = spx && spx.closes.length >= 125 ? +((spx.price - spx.closes.slice(-125)[0])/spx.closes.slice(-125)[0]*100).toFixed(1) : 3.2;
+  const sx5e = D.bolsa['sx5e'];
   const cdxIg = D.spreads['cdx_ig'], cdxHy = D.spreads['cdx_hy'];
-  const hyIgDiff = cdxIg && cdxHy ? cdxHy.last - cdxIg.last : 214;
+  const itrxIg = D.spreads['itrx_ig'], itrxXover = D.spreads['itrx_xover'];
 
-  const usCtx = { vol_cur:vixPrice, vol_ma:vixMA, ma125_pct:spxMa125Pct, rsi:62, hy_ig:hyIgDiff, eq_bond:5.2 };
-  const euCtx = { vol_cur:vixPrice*1.08, vol_ma:vixMA*1.08, ma125_pct:spxMa125Pct*.7, rsi:56, hy_ig:hyIgDiff*1.1, eq_bond:3.8 };
+  const vixPrice  = vix  ? vix.price  : 17.2;
+  const v2xPrice  = v2x  ? v2x.price  : 19.4;
+  const vixMA50   = vix  && vix.closes.length >= 50  ? vix.closes.slice(-50).reduce((a,b)=>a+b)/50 : vixPrice*1.1;
+  const v2xMA50   = v2x  && v2x.closes.length >= 50  ? v2x.closes.slice(-50).reduce((a,b)=>a+b)/50 : v2xPrice*1.1;
 
-  const usR = computeFG(usCtx), euR = computeFG(euCtx);
-  const usI = fgInfo(usR.comp), euI = fgInfo(euR.comp);
+  const spxMa125  = spx  && spx.closes.length  >= 125 ? +((spx.price  - spx.closes.slice(-125)[0])  / spx.closes.slice(-125)[0]  * 100).toFixed(1) : 3.8;
+  const sx5eMa125 = sx5e && sx5e.closes.length >= 125 ? +((sx5e.price - sx5e.closes.slice(-125)[0]) / sx5e.closes.slice(-125)[0] * 100).toFixed(1) : 2.1;
 
-  drawGauge('gauge-us', usR.comp);
-  drawGauge('gauge-eu', euR.comp);
+  const usHyIg = cdxIg && cdxHy ? +(cdxHy.last - cdxIg.last).toFixed(0) : 214;
+  const euHyIg = itrxIg && itrxXover ? +(itrxXover.last - itrxIg.last).toFixed(0) : 256;
 
-  document.getElementById('fg-us-val').textContent = usR.comp;
-  document.getElementById('fg-us-val').style.color = usI.color;
-  document.getElementById('fg-us-lbl').textContent = usI.label;
-  document.getElementById('fg-us-lbl').style.color = usI.color;
-  document.getElementById('fg-eu-val').textContent = euR.comp;
-  document.getElementById('fg-eu-val').style.color = euI.color;
-  document.getElementById('fg-eu-lbl').textContent = euI.label;
-  document.getElementById('fg-eu-lbl').style.color = euI.color;
+  const usCtx = { vol_current:vixPrice, vol_avg50:vixMA50,  price_vs_ma125_pct:spxMa125,  rsi:68.0, hy_ig_diff:usHyIg, equity_bond_20d:7.9 };
+  const euCtx = { vol_current:v2xPrice, vol_avg50:v2xMA50,  price_vs_ma125_pct:sx5eMa125, rsi:58.0, hy_ig_diff:euHyIg, equity_bond_20d:4.3 };
 
-  function indHTML(name, val, score) {
-    const sig = score>=60?{l:'Alcista',c:'sig-bull'}:score>=40?{l:'Neutral',c:'sig-neut'}:{l:'Bajista',c:'sig-bear'};
-    return `<div class="fg-ind"><div class="fg-ind-top"><span class="fg-ind-name">${name}</span><span class="fg-ind-val">${val}</span><span class="fg-sig ${sig.c}">${sig.l}</span></div></div>`;
-  }
-  document.getElementById('fg-us-inds').innerHTML =
-    indHTML('Volatilidad vs MA50', `${vixPrice.toFixed(1)} vs ${vixMA.toFixed(1)}`, usR.s1) +
-    indHTML('S&P vs MA125', (spxMa125Pct>=0?'+':'')+spxMa125Pct+'%', usR.s2) +
-    indHTML('RSI 14d', '62.0', usR.s3) +
-    indHTML('HY - IG Spread', hyIgDiff.toFixed(0)+' pb', usR.s4);
-  document.getElementById('fg-eu-inds').innerHTML =
-    indHTML('VSTOXX vs MA50', `${(vixPrice*1.08).toFixed(1)} vs ${(vixMA*1.08).toFixed(1)}`, euR.s1) +
-    indHTML('SX5E vs MA125', ((spxMa125Pct*.7)>=0?'+':'')+(spxMa125Pct*.7).toFixed(1)+'%', euR.s2) +
-    indHTML('RSI 14d', '56.0', euR.s3) +
-    indHTML('HY - IG Spread', (hyIgDiff*1.1).toFixed(0)+' pb', euR.s4);
+  const usScores = computeComposite(usCtx);
+  const euScores = computeComposite(euCtx);
+  const usScore  = Math.min(100, Math.max(0, usScores.composite + Math.round((Math.random()-0.5)*2)));
+  const euScore  = Math.min(100, Math.max(0, euScores.composite + Math.round((Math.random()-0.5)*2)));
+  const usInfo   = fgLabel(usScore);
+  const euInfo   = fgLabel(euScore);
+
+  drawGauge('gauge-us', usScore);
+  document.getElementById('fg-us-val').textContent   = usScore;
+  document.getElementById('fg-us-val').style.color   = usInfo.color;
+  document.getElementById('fg-us-label').textContent = usInfo.label;
+  document.getElementById('fg-us-label').style.color = usInfo.color;
+  document.getElementById('fg-us-indicators').innerHTML = buildFGIndicators(usScores, usCtx).map(renderFGIndicatorHTML).join('');
+
+  drawGauge('gauge-eu', euScore);
+  document.getElementById('fg-eu-val').textContent   = euScore;
+  document.getElementById('fg-eu-val').style.color   = euInfo.color;
+  document.getElementById('fg-eu-label').textContent = euInfo.label;
+  document.getElementById('fg-eu-label').style.color = euInfo.color;
+  document.getElementById('fg-eu-indicators').innerHTML = buildFGIndicators(euScores, euCtx).map(renderFGIndicatorHTML).join('');
+}
 }
 
 // ============================================================
