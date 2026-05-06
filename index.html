@@ -900,18 +900,49 @@ function loadExcel(file) {
           });
         }
 
-        // VALORACIÓN
+        // VALORACIÓN — estructura diferente: tickers en fila 3 (sin col vacía), fecha en col par, valor en col impar
         const valSheet = wb.Sheets['valoración valores'];
         if (valSheet) {
-          const s = parseSheet(valSheet, PER_MAP);
-          Object.entries(s).forEach(([ticker, data]) => {
-            const id = PER_MAP[ticker];
-            if (D.bolsa[id]) {
-              D.bolsa[id].per = data.values[data.values.length-1];
-              D.bolsa[id].perDates = data.dates;
-              D.bolsa[id].perSeries = data.values;
+          const rows = XLSX.utils.sheet_to_json(valSheet, { header:1, defval:null, raw:false, cellDates:true });
+          // Find ticker row
+          let tickerRow = null, tickerIdx = -1;
+          for (let i=0; i<Math.min(rows.length,6); i++) {
+            if (rows[i] && rows[i].some(c => typeof c==='string' && PER_MAP[c.trim()])) {
+              tickerRow = rows[i]; tickerIdx = i; break;
             }
-          });
+          }
+          if (tickerRow) {
+            // Map: colIndex → dashId (value is in col+1, date is in col itself)
+            const colMap = {};
+            tickerRow.forEach((cell, col) => {
+              if (typeof cell==='string' && PER_MAP[cell.trim()]) colMap[col] = PER_MAP[cell.trim()];
+            });
+            // Accumulate series
+            const perData = {};
+            Object.values(colMap).forEach(id => { perData[id] = { dates:[], values:[] }; });
+            for (let i=tickerIdx+1; i<rows.length; i++) {
+              const row = rows[i]; if (!row) continue;
+              Object.entries(colMap).forEach(([colStr, id]) => {
+                const col = +colStr;
+                const dateCell = row[col];
+                const valCell  = row[col+1];
+                const d = parseDate(dateCell);
+                if (!d) return;
+                const v = typeof valCell==='number' ? valCell : (typeof valCell==='string' ? parseFloat(valCell) : null);
+                if (v===null || isNaN(v) || v <= 0 || v > 200) return; // filter bad values
+                perData[id].dates.push(d);
+                perData[id].values.push(+v.toFixed(2));
+              });
+            }
+            Object.entries(perData).forEach(([id, s]) => {
+              if (!s.dates.length) return;
+              if (D.bolsa[id]) {
+                D.bolsa[id].per = s.values[s.values.length-1];
+                D.bolsa[id].perDates = s.dates;
+                D.bolsa[id].perSeries = s.values;
+              }
+            });
+          }
         }
 
         // INFLACIÓN
