@@ -549,6 +549,13 @@ canvas { display:block; }
           <div class="dm"><span class="dm-label">Máx 52S</span><span class="dm-val" id="det-high">—</span></div>
           <div class="dm"><span class="dm-label">Mín 52S</span><span class="dm-val" id="det-low">—</span></div>
         </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div class="period-row" id="eq-chart-type-row">
+            <button class="pbtn active" onclick="setEqChartType('price',this)">Precio</button>
+            <button class="pbtn" onclick="setEqChartType('ey',this)">Earning Yield</button>
+            <button class="pbtn" onclick="setEqChartType('fcfy',this)">FCF Yield</button>
+          </div>
+        </div>
         <div class="chart-wrap" style="height:220px"><canvas id="det-chart"></canvas></div>
       </div>
       <div>
@@ -708,7 +715,11 @@ const D = {
   bolsa: {},      // id → { name, ticker, dates[], closes[], per? }
   valuation: {},  // id → { name, dates[], pers[] }
   tipos: {},      // ticker → { name, country, tenor, dates[], values[] }
+  pendientes: {},  // id → { name, country, dates[], values[] }
+  tiposRef: {},    // id → { name, dates[], values[] }
   spreads: {},    // id → { name, dates[], values[] }
+  ey:      {},      // id → { dates[], values[] } earning yield
+  fcfy:    {},      // id → { dates[], values[] } free cash flow yield
   mmpp: {},       // id → { name, unit, group, dates[], closes[] }
   inflation: {},  // id → { name, dates[], values[] }
   loaded: false,
@@ -735,6 +746,20 @@ const EQ_MAP = {
   'MXCN Index':      { id:'mxcn',   name:'MSCI China',    region:'China',  exchange:'MSCI'   },
   'VIX Index':       { id:'vix',    name:'VIX',           region:'EEUU',   exchange:'CBOE',  isVol:true },
   'V2X Index':       { id:'v2x',    name:'VSTOXX',        region:'Europa', exchange:'EUREX', isVol:true },
+  'KOSPI Index':     { id:'kospi',  name:'KOSPI',         region:'Korea',  exchange:'KRX'            },
+  'IBEX Index':      { id:'ibex',   name:'IBEX 35',       region:'España', exchange:'BME'            },
+};
+
+const EY_MAP = {
+  'NDX Index':'ndx','SPX Index':'spx','SX5E Index':'sx5e','MXWD Index':'mxwd',
+  'NKY Index':'nky','UBXXMAG7 Index':'mag7','RTY Index':'rty','MXEF Index':'mxef',
+  'MXLA Index':'mxla','MXCN Index':'mxcn',
+};
+
+const FCFY_MAP = {
+  'NDX Index':'ndx','SPX Index':'spx','SX5E Index':'sx5e','MXWD Index':'mxwd',
+  'NKY Index':'nky','UBXXMAG7 Index':'mag7','RTY Index':'rty','MXEF Index':'mxef',
+  'MXLA Index':'mxla','MXCN Index':'mxcn',
 };
 
 const FX_MAP = {
@@ -749,8 +774,9 @@ const MMPP_MAP = {
   'XAG BGN Curncy':      { id:'silver', name:'Plata',    unit:'USD/oz', group:'metales' },
   'CO1 Comdty':          { id:'brent',  name:'Brent',    unit:'USD/b',  group:'energia' },
   'CL1 Comdty':          { id:'wti',    name:'WTI',      unit:'USD/b',  group:'energia' },
-  'NG1 COMB Comdty':     { id:'natgas', name:'Gas Nat.', unit:'USD',    group:'energia' },
-  'TTFG1MON SPEC Index': { id:'ttf',    name:'TTF Gas',  unit:'€/MWh',  group:'energia' },
+  'TTFG1MON SPEC Index': { id:'ttf',      name:'TTF Gas',      unit:'€/MWh',  group:'energia'  },
+  'XAUXAG BGN Curncy':   { id:'gold_silver', name:'Ratio Oro/Plata', unit:'ratio', group:'metales' },
+  'XBTUSD BGN Curncy':   { id:'bitcoin',  name:'Bitcoin',      unit:'USD',    group:'otros'    },
 };
 
 const TIPOS_MAP = {
@@ -925,7 +951,14 @@ function loadExcel(file) {
           const s = parseSheet(tiposSheet, TIPOS_MAP);
           Object.entries(s).forEach(([ticker, data]) => {
             const meta = TIPOS_MAP[ticker];
-            D.tipos[meta.id] = { ...meta, dates:data.dates, values:data.values, last:data.values[data.values.length-1] };
+            const last = data.values[data.values.length-1];
+            if (meta.isPendiente) {
+              D.pendientes[meta.id] = { ...meta, dates:data.dates, values:data.values, last };
+            } else if (meta.isTipoRef) {
+              D.tiposRef[meta.id] = { ...meta, dates:data.dates, values:data.values, last };
+            } else {
+              D.tipos[meta.id] = { ...meta, dates:data.dates, values:data.values, last };
+            }
           });
         }
 
@@ -936,6 +969,30 @@ function loadExcel(file) {
           Object.entries(s).forEach(([ticker, data]) => {
             const meta = SPREAD_MAP[ticker];
             D.spreads[meta.id] = { ...meta, dates:data.dates, values:data.values, last:data.values[data.values.length-1] };
+          });
+        }
+
+        // EY — Earning Yield
+        const eySheet = wb.Sheets['EY valores'];
+        if (eySheet) {
+          const s = parseSheet(eySheet, EY_MAP);
+          Object.entries(s).forEach(([ticker, data]) => {
+            const id = EY_MAP[ticker];
+            if (id && D.bolsa[id]) {
+              D.ey[id] = { dates: data.dates, values: data.values };
+            }
+          });
+        }
+
+        // FCFY — Free Cash Flow Yield
+        const fcfySheet = wb.Sheets['FCFY valores'];
+        if (fcfySheet) {
+          const s = parseSheet(fcfySheet, FCFY_MAP);
+          Object.entries(s).forEach(([ticker, data]) => {
+            const id = FCFY_MAP[ticker];
+            if (id) {
+              D.fcfy[id] = { dates: data.dates, values: data.values };
+            }
           });
         }
 
@@ -1134,6 +1191,55 @@ function renderBolsa() {
   if (!D.selIndex && idxList.length) selectIndex(idxList[0].id);
 }
 
+function setEqChartType(type, btn) {
+  eqChartType = type;
+  document.querySelectorAll('#eq-chart-type-row .pbtn').forEach(b=>b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  if (D.selIndex) renderEqDetailChart(D.selIndex, D.eqPeriod);
+}
+
+function renderEqDetailChart(id, period) {
+  const idx = D.bolsa[id];
+  if (!idx) return;
+
+  let dates, values, label, color, yFormat;
+
+  if (eqChartType === 'ey' && D.ey[id]) {
+    const f = filterPeriod(D.ey[id].dates, D.ey[id].values, period);
+    dates = f.dates; values = f.values; label = 'Earning Yield %';
+    color = '#22c55e'; yFormat = v => v.toFixed(2)+'%';
+  } else if (eqChartType === 'fcfy' && D.fcfy[id]) {
+    const f = filterPeriod(D.fcfy[id].dates, D.fcfy[id].values, period);
+    dates = f.dates; values = f.values; label = 'FCF Yield %';
+    color = '#a78bfa'; yFormat = v => v.toFixed(2)+'%';
+  } else {
+    const f = filterPeriod(idx.dates, idx.closes, period);
+    dates = f.dates; values = f.values; label = idx.name;
+    const isPos = values.length && values[values.length-1] >= values[0];
+    color = isPos ? '#1a7a3c' : '#c0392b';
+    yFormat = v => fmt(v);
+  }
+
+  if (!dates || !dates.length) return;
+
+  destroyChart('det-chart');
+  const ctx = document.getElementById('det-chart');
+  if (!ctx) return;
+  charts['det-chart'] = new Chart(ctx.getContext('2d'), {
+    type:'line',
+    data:{ labels:dates.map(d=>d.slice(5)), datasets:[{
+      data:values, borderColor:color, backgroundColor:color+'15',
+      borderWidth:2, fill:true, tension:0.3, pointRadius:0, pointHoverRadius:4
+    }]},
+    options:{ ...CHART_BASE, plugins:{ ...CHART_BASE.plugins,
+      tooltip:{ ...CHART_BASE.plugins.tooltip, callbacks:{ label:ctx=>` ${yFormat(ctx.parsed.y)}` } }
+    },
+    scales:{ ...CHART_BASE.scales, y:{ ...CHART_BASE.scales.y,
+      ticks:{ ...CHART_BASE.scales.y.ticks, callback: yFormat }
+    }}},
+  });
+}
+
 function selectIndex(id) {
   D.selIndex = id;
   const idx = D.bolsa[id];
@@ -1249,9 +1355,7 @@ function renderRentaFija() {
   const el = document.getElementById('rf-content');
   if (!Object.keys(D.tipos).length) { el.innerHTML = '<div class="empty"><div class="empty-icon">📉</div><div class="empty-text">Sin datos de tipos</div></div>'; return; }
 
-  // Table: countries × tenors
   const countries = ['US','DE','JP','UK'];
-  const tenors = ['2Y','5Y','10Y','30Y'];
   const cFlags = { US:'🇺🇸',DE:'🇩🇪',JP:'🇯🇵',UK:'🇬🇧' };
   const cNames = { US:'EEUU',DE:'Alemania',JP:'Japón',UK:'R. Unido' };
 
@@ -1260,30 +1364,66 @@ function renderRentaFija() {
     return D.tipos[id]?.last ?? null;
   }
 
+  // Table with 2-10, 2-30 slopes
   const tableRows = countries.map(c => {
-    const vals = tenors.map(t => getVal(c,t));
-    const y2 = vals[0], y10 = vals[2];
-    const slope = y2!=null&&y10!=null ? +(y10-y2).toFixed(2) : null;
-    const slopeCls = slope > 0.1 ? 'td-pos' : slope < -0.1 ? 'td-neg' : '';
+    const y2=getVal(c,'2Y'), y5=getVal(c,'5Y'), y10=getVal(c,'10Y'), y30=getVal(c,'30Y');
+    const s210  = y2!=null&&y10!=null  ? +(y10-y2).toFixed(2)  : null;
+    const s230  = y2!=null&&y30!=null  ? +(y30-y2).toFixed(2)  : null;
+    const sCls  = v => v>0.1?'td-pos':v<-0.1?'td-neg':'';
     return `<tr>
       <td>${cFlags[c]} ${cNames[c]}</td>
-      ${vals.map(v=>`<td class="td-val">${v!=null?v.toFixed(2)+'%':'—'}</td>`).join('')}
-      <td class="${slopeCls} td-val">${slope!=null?(slope>0?'+':'')+slope+'%':'—'}</td>
+      <td class="td-val">${y2!=null?y2.toFixed(2)+'%':'—'}</td>
+      <td class="td-val">${y5!=null?y5.toFixed(2)+'%':'—'}</td>
+      <td class="td-val">${y10!=null?y10.toFixed(2)+'%':'—'}</td>
+      <td class="td-val">${y30!=null?y30.toFixed(2)+'%':'—'}</td>
+      <td class="${sCls(s210)} td-val">${s210!=null?(s210>0?'+':'')+s210+'%':'—'}</td>
+      <td class="${sCls(s230)} td-val">${s230!=null?(s230>0?'+':'')+s230+'%':'—'}</td>
     </tr>`;
   }).join('');
 
+  // Tipos de referencia
+  const tiposRefHTML = Object.values(D.tiposRef).map(t =>
+    `<div style="background:var(--bg3);border-radius:6px;padding:10px 14px;text-align:center">
+      <div style="font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:0.08em">${t.name}</div>
+      <div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--blue)">${t.last!=null?t.last.toFixed(2)+'%':'—'}</div>
+    </div>`
+  ).join('');
+
+  const slopePeriodBtns = `<div class="period-row" id="slope-period-row">
+    <button class="pbtn active" onclick="setSlopePeriod('3M',this)">3M</button>
+    <button class="pbtn" onclick="setSlopePeriod('6M',this)">6M</button>
+    <button class="pbtn" onclick="setSlopePeriod('1Y',this)">1A</button>
+    <button class="pbtn" onclick="setSlopePeriod('3Y',this)">3A</button>
+  </div>`;
+
   el.innerHTML = `
-    <div class="two-col" style="margin-bottom:16px">
+    <div style="margin-bottom:16px">
       <div class="chart-panel">
-        <div class="cp-title">Tipos por Plazo (%)</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <div class="cp-title" style="margin:0">Tipos por Plazo (%)</div>
+          ${tiposRefHTML ? `<div style="display:flex;gap:8px">${tiposRefHTML}</div>` : ''}
+        </div>
         <table class="data-table">
-          <thead><tr><th>País</th><th>2Y</th><th>5Y</th><th>10Y</th><th>30Y</th><th>Pendiente 2-10</th></tr></thead>
+          <thead><tr><th>País</th><th>2Y</th><th>5Y</th><th>10Y</th><th>30Y</th><th>Pend. 2-10</th><th>Pend. 2-30</th></tr></thead>
           <tbody>${tableRows}</tbody>
         </table>
       </div>
+    </div>
+    <div class="three-col" style="margin-bottom:16px">
       <div class="chart-panel">
-        <div class="cp-title">Pendiente 2-10Y (pb)</div>
-        <div class="chart-wrap" style="height:180px"><canvas id="slope-chart"></canvas></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div class="cp-title" style="margin:0">Pendiente 2-10Y</div>
+          ${slopePeriodBtns}
+        </div>
+        <div class="chart-wrap" style="height:160px"><canvas id="slope-2-10-chart"></canvas></div>
+      </div>
+      <div class="chart-panel">
+        <div class="cp-title">Pendiente 2-30Y</div>
+        <div class="chart-wrap" style="height:160px"><canvas id="slope-2-30-chart"></canvas></div>
+      </div>
+      <div class="chart-panel">
+        <div class="cp-title">Pendiente 10-30Y</div>
+        <div class="chart-wrap" style="height:160px"><canvas id="slope-10-30-chart"></canvas></div>
       </div>
     </div>
     <div class="two-col">
@@ -1308,21 +1448,58 @@ function renderRentaFija() {
       </div>
     </div>`;
 
-  // Slope chart
   setTimeout(() => {
-    const slopeData = countries.map(c => {
-      const y2 = getVal(c,'2Y'), y10 = getVal(c,'10Y');
-      return y2!=null&&y10!=null ? +(y10-y2).toFixed(2) : 0;
-    });
-    makeChart('slope-chart','bar', countries.map(c=>cNames[c]),
-      [{ data:slopeData, backgroundColor:slopeData.map(v=>v>0?'rgba(34,197,94,0.7)':'rgba(239,68,68,0.7)'), borderRadius:4 }]);
-
+    renderSlopeCharts('3M');
     renderYield10y('3M');
     renderCurve('US');
   }, 50);
 }
 
-let rfPeriod = '3M', curveCountry = 'US';
+let rfPeriod = '3M', curveCountry = 'US', slopePeriod = '3M';
+
+function setSlopePeriod(p, btn) {
+  slopePeriod = p;
+  document.querySelectorAll('#slope-period-row .pbtn').forEach(b=>b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderSlopeCharts(p);
+}
+
+function renderSlopeCharts(period) {
+  const slopeTypes = [
+    { id:'2-10', suffix:'_2_10',  canvasId:'slope-2-10-chart' },
+    { id:'2-30', suffix:'_2_30',  canvasId:'slope-2-30-chart' },
+    { id:'10-30',suffix:'_10_30', canvasId:'slope-10-30-chart' },
+  ];
+  const colors = { US:'#0085CA', DE:'#22c55e', UK:'#a78bfa', JP:'#f59e0b' };
+  const flags  = { US:'🇺🇸', DE:'🇩🇪', UK:'🇬🇧', JP:'🇯🇵' };
+
+  slopeTypes.forEach(({ id, suffix, canvasId }) => {
+    const datasets = [];
+    let labels = [];
+    ['US','DE','UK','JP'].forEach(c => {
+      const key = c.toLowerCase() + suffix;
+      const t = D.pendientes[key];
+      if (!t || !t.dates.length) return;
+      const f = filterPeriod(t.dates, t.values, period === '3Y' ? null : period);
+      let dates = f.dates, values = f.values;
+      if (period === '3Y') {
+        const cut = new Date(); cut.setFullYear(cut.getFullYear()-3);
+        const pairs = t.dates.map((d,i)=>({d,v:t.values[i]})).filter(p=>new Date(p.d)>=cut);
+        dates = pairs.map(p=>p.d); values = pairs.map(p=>p.v);
+      }
+      if (!labels.length) labels = dates.map(d=>d.slice(5));
+      datasets.push({ ...lineDs(`${flags[c]} ${c}`, values, colors[c]), labels: dates.map(d=>d.slice(5)) });
+    });
+    if (!datasets.length) return;
+    datasets.forEach(ds => delete ds.labels);
+    makeChart(canvasId, 'line', labels, datasets, {
+      plugins:{ ...CHART_BASE.plugins, legend:{ display:true, labels:{color:'#2a5a72',font:{size:10,family:'IBM Plex Mono'}} },
+        tooltip:{ ...CHART_BASE.plugins.tooltip, callbacks:{ label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.y>=0?'+':''}${ctx.parsed.y.toFixed(2)}%` } } },
+      scales:{ ...CHART_BASE.scales, y:{ ...CHART_BASE.scales.y, ticks:{ ...CHART_BASE.scales.y.ticks, callback:v=>(v>=0?'+':'')+v.toFixed(2)+'%' } } },
+    });
+  });
+}
+
 function setRfPeriod(p, btn) {
   rfPeriod = p;
   document.querySelectorAll('#rf-content .pbtn').forEach(b=>{ if(['3M','6M','1A','3A'].includes(b.textContent.trim())) b.classList.remove('active'); });
@@ -1536,6 +1713,7 @@ const CORR_PAIRS = [
 ];
 
 let selCorrPair = null;
+let eqChartType = 'price'; // 'price' | 'ey' | 'fcfy'
 
 function getSeries(id) {
   if (D.bolsa[id]) return { dates: D.bolsa[id].dates, values: D.bolsa[id].closes };
@@ -1998,25 +2176,30 @@ const SCENARIOS = [
 ];
 
 // BMK: 50% Bolsa / 20% RF / 20% USD / 5% Oro / Dur 4
-const BMK = { 'Bolsa':50, 'RF Gobierno':10, 'RF Crédito':10, 'USD/Cash':20, 'Oro':5, 'Otros':5 };
+// BMK: 50% Bolsa / 20% RF / 20% USD / 5% Oro / Dur 4
+const BMK = { 'Bolsa':50, 'RF Gobierno':15, 'RF Crédito':10, 'USD':20, 'Oro':5 };
 
 // AA por escenario — rangos representados por punto medio
 const AA_SC = {
-  recesion:   { 'Bolsa':20,  'RF Gobierno':35, 'RF Crédito':8,  'USD/Cash':30, 'Oro':7,  'Otros':0  },
-  crecimiento:{ 'Bolsa':90,  'RF Gobierno':0,  'RF Crédito':15, 'USD/Cash':10, 'Oro':3,  'Otros':-18 },
-  madurez:    { 'Bolsa':60,  'RF Gobierno':15, 'RF Crédito':10, 'USD/Cash':10, 'Oro':5,  'Otros':0  },
-  stagfl:     { 'Bolsa':35,  'RF Gobierno':10, 'RF Crédito':5,  'USD/Cash':25, 'Oro':15, 'Otros':10 },
+  // Recesión: bolsa 20, USD 40, Oro 7 → RF = 33 (28 Gob + 5 Cred, poco crédito)
+  recesion:   { 'Bolsa':20,  'RF Gobierno':28, 'RF Crédito':5,  'USD':40, 'Oro':7  },
+  // Crecimiento: bolsa 80, USD 14, Oro 3, RF Cred 3 → suma 100
+  crecimiento:{ 'Bolsa':80,  'RF Gobierno':0,  'RF Crédito':3,  'USD':14, 'Oro':3  },
+  // Madurez: bolsa 60, USD 10, Oro 5 → RF = 25 (neutral: 12 Gob + 13 Cred)
+  madurez:    { 'Bolsa':60,  'RF Gobierno':12, 'RF Crédito':13, 'USD':10, 'Oro':5  },
+  // Estanflación: bolsa 35, USD 25, Oro 5 → RF = 35 (sesgo tipos: 30 Gob + 5 Cred)
+  stagfl:     { 'Bolsa':35,  'RF Gobierno':30, 'RF Crédito':5,  'USD':25, 'Oro':5  },
 };
 
 // AA ranges text
 const AA_RANGES = {
-  recesion:   { 'Bolsa':'10-30%', 'RF Gobierno':'30-40%', 'RF Crédito':'5-10%', 'USD/Cash':'35-45%', 'Oro':'7%', 'Dur':'6-7' },
-  crecimiento:{ 'Bolsa':'80-100%','RF Gobierno':'0-5%',   'RF Crédito':'10-20%','USD/Cash':'10-20%', 'Oro':'3%', 'Dur':'4'   },
-  madurez:    { 'Bolsa':'50-70%', 'RF Gobierno':'10-20%', 'RF Crédito':'8-12%', 'USD/Cash':'8-12%',  'Oro':'5%', 'Dur':'5'   },
-  stagfl:     { 'Bolsa':'30-40%', 'RF Gobierno':'8-12%',  'RF Crédito':'3-7%',  'USD/Cash':'20-30%', 'Oro':'10-20%','Dur':'4' },
+  recesion:   { 'Bolsa':'10-30%', 'RF Gobierno':'25-35%', 'RF Crédito':'0-5%',  'USD':'40%',    'Oro':'7%', 'Dur':'6-7' },
+  crecimiento:{ 'Bolsa':'80-100%','RF Gobierno':'0%',     'RF Crédito':'10-20%','USD':'10-20%', 'Oro':'3%', 'Dur':'4'   },
+  madurez:    { 'Bolsa':'50-70%', 'RF Gobierno':'10-15%', 'RF Crédito':'10-15%','USD':'10%',    'Oro':'5%', 'Dur':'5'   },
+  stagfl:     { 'Bolsa':'30-40%', 'RF Gobierno':'25-35%', 'RF Crédito':'3-7%',  'USD':'25%',    'Oro':'5%', 'Dur':'4'   },
 };
 
-const AA_ASSETS  = ['Bolsa','RF Gobierno','RF Crédito','USD/Cash','Oro'];
+const AA_ASSETS  = ['Bolsa','RF Gobierno','RF Crédito','USD','Oro'];
 const AA_COLORS  = ['#0085CA','#22c55e','#2dd4bf','#f59e0b','#e8b94f'];
 
 let scProbs = Object.fromEntries(SCENARIOS.map(s=>[s.id, s.base]));
@@ -2045,7 +2228,7 @@ function renderEscenarios() {
         <div style="font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:0.08em;margin-bottom:6px">ASIGNACIÓN</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <span style="font-family:var(--mono);font-size:10px;color:var(--blue)">📊 Bolsa ${ranges['Bolsa']}</span>
-          <span style="font-family:var(--mono);font-size:10px;color:var(--text2)">💵 USD ${ranges['USD/Cash']}</span>
+          <span style="font-family:var(--mono);font-size:10px;color:var(--text2)">💵 USD ${ranges['USD']}</span>
           <span style="font-family:var(--mono);font-size:10px;color:var(--green)">🏦 Dur ${ranges['Dur']}</span>
           <span style="font-family:var(--mono);font-size:10px;color:#e8b94f">🥇 Oro ${ranges['Oro']}</span>
         </div>
@@ -2126,6 +2309,33 @@ function updateAAChart() {
       </div>
     </div>`;
   }).join('');
+
+  // Info rows: USD exposure and Duration (not in 100% allocation)
+  const domScAA = AA_SC[Object.entries(scProbs).sort((a,b)=>b[1]-a[1])[0][0]];
+  const usdInfo = Object.values(scProbs).reduce((sum, prob, i) => {
+    const sc = SCENARIOS[i];
+    return sum + (AA_SC[sc.id].USD_info || 0) * prob;
+  }, 0) / Object.values(scProbs).reduce((a,b)=>a+b,0);
+  const durInfo = Object.values(scProbs).reduce((sum, prob, i) => {
+    const sc = SCENARIOS[i];
+    return sum + (AA_SC[sc.id].Dur_info || 0) * prob;
+  }, 0) / Object.values(scProbs).reduce((a,b)=>a+b,0);
+
+  const infoHTML = `<div style="margin-top:16px;padding:12px;background:rgba(0,133,202,0.05);border-radius:8px;border:1px dashed rgba(0,133,202,0.2)">
+    <div style="font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:0.1em;margin-bottom:8px">PARÁMETROS INFORMATIVOS (no computan en 100%)</div>
+    <div style="display:flex;gap:24px">
+      <div>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--text3)">Exposición USD</div>
+        <div style="font-family:var(--mono);font-size:18px;font-weight:700;color:#f59e0b">${usdInfo.toFixed(0)}%</div>
+      </div>
+      <div>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--text3)">Duración cartera</div>
+        <div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--blue)">${durInfo.toFixed(1)}</div>
+        <div style="font-family:var(--mono);font-size:9px;color:var(--text3)">BMK: 4.0</div>
+      </div>
+    </div>
+  </div>`;
+  if (barsEl) barsEl.insertAdjacentHTML('beforeend', infoHTML);
 
   // Strategies for dominant scenario
   const domId = Object.entries(scProbs).sort((a,b)=>b[1]-a[1])[0][0];
