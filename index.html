@@ -775,6 +775,14 @@ function parseDate(cell) {
   if (typeof cell === 'string') {
     const m = cell.match(/\d{4}-\d{2}-\d{2}/);
     if (m) return m[0];
+    // Try parsing as date string
+    const d = new Date(cell);
+    if (!isNaN(d.getTime()) && d.getFullYear() >= 1990) return d.toISOString().slice(0,10);
+  }
+  // Excel serial number (e.g. 46147 = 2026-05-06)
+  if (typeof cell === 'number' && cell > 40000 && cell < 60000) {
+    const d = new Date(Date.UTC(1899, 11, 30) + cell * 86400000);
+    if (!isNaN(d.getTime()) && d.getFullYear() >= 1990) return d.toISOString().slice(0,10);
   }
   return null;
 }
