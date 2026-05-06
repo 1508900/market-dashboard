@@ -26,6 +26,7 @@ function showSection(name) {
     case 'credit':
       renderCreditCards();
       renderCreditCharts();
+      renderEUCreditCharts();
       break;
     case 'forex':
       renderForexCards();
@@ -65,6 +66,7 @@ function setEquityPeriod(period, btn) {
   if (btn) btn.classList.add('active');
   renderIndexCards();
   renderIndexChart(selectedIndex, period);
+  if (typeof renderValuationPanel === 'function') renderValuationPanel();
 }
 
 // ---- TICKER BAR ----
@@ -360,6 +362,7 @@ async function init() {
 
   // Render equity section (default)
   renderIndexCards();
+  renderValuationPanel();
   updateTickerBar();
 
   // Select first index
