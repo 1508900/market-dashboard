@@ -524,12 +524,12 @@ canvas { display:block; }
 <section class="section active" id="sec-bolsa">
   <div class="sec-title">
     <div><span>01</span>Renta Variable</div>
-    <div class="period-row">
-      <button class="pbtn active" onclick="setEqPeriod('1W',this)">1S</button>
+    <div class="period-row" id="eq-period-row">
       <button class="pbtn" onclick="setEqPeriod('1M',this)">1M</button>
       <button class="pbtn" onclick="setEqPeriod('3M',this)">3M</button>
       <button class="pbtn" onclick="setEqPeriod('YTD',this)">YTD</button>
       <button class="pbtn" onclick="setEqPeriod('1Y',this)">1A</button>
+      <button class="pbtn" onclick="setEqPeriod('2Y',this)">2A</button>
       <button class="pbtn" onclick="setEqPeriod('3Y',this)">3A</button>
     </div>
   </div>
@@ -1087,6 +1087,7 @@ function filterPeriod(dates, values, period) {
   else if (period==='6M')  cut.setMonth(cut.getMonth()-6);
   else if (period==='YTD') { cut.setMonth(0); cut.setDate(1); }
   else if (period==='1Y')  cut.setFullYear(cut.getFullYear()-1);
+  else if (period==='2Y')  cut.setFullYear(cut.getFullYear()-2);
   else if (period==='3Y')  cut.setFullYear(cut.getFullYear()-3);
   const pairs = dates.map((d,i)=>({d,v:values[i]})).filter(p=>new Date(p.d)>=cut && p.v!=null);
   return { dates:pairs.map(p=>p.d), values:pairs.map(p=>p.v) };
@@ -1280,7 +1281,7 @@ function selectIndex(id) {
   makeChart('det-chart', 'line', dates.map(d=>d.slice(5)), [lineDs(idx.name, closes, color, true)]);
 
   // Periods summary
-  const periods = ['1W','1M','3M','YTD','1Y','3Y'];
+  const periods = ['1W','1M','3M','YTD','1Y','2Y','3Y'];
   const periodsEl = document.getElementById('det-periods');
   periodsEl.innerHTML = periods.map(p => {
     const v = periodPerf(idx.dates, idx.closes, p);
@@ -1293,10 +1294,10 @@ function selectIndex(id) {
 
 function setEqPeriod(p, btn) {
   D.eqPeriod = p;
-  document.querySelectorAll('#sec-bolsa .pbtn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('#eq-period-row .pbtn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   renderBolsa();
-  if (D.selIndex) selectIndex(D.selIndex);
+  if (D.selIndex) renderEqDetailChart(D.selIndex, p);
 }
 
 // ============================================================
@@ -2261,96 +2262,111 @@ function updateAAChart() {
   const total = Object.values(scProbs).reduce((a,b)=>a+b, 0);
   if (!total) return;
 
-  // Weighted AA
   const aa = {};
   AA_ASSETS.forEach(a => aa[a] = 0);
   SCENARIOS.forEach(sc => {
     const w = scProbs[sc.id] / total;
-    const scAA = AA_SC[sc.id];
-    AA_ASSETS.forEach(a => { aa[a] += (scAA[a] || 0) * w; });
+    AA_ASSETS.forEach(a => { aa[a] += (AA_SC[sc.id][a] || 0) * w; });
   });
-
-  // Clamp to reasonable range
   AA_ASSETS.forEach(a => { aa[a] = Math.max(0, Math.min(100, +aa[a].toFixed(1))); });
 
-  // Donut
+  const usdInfo = SCENARIOS.reduce((s,sc) => s + (AA_SC[sc.id].USD_info||0) * scProbs[sc.id], 0) / total;
+  const durInfo = SCENARIOS.reduce((s,sc) => s + (AA_SC[sc.id].Dur_info||0) * scProbs[sc.id], 0) / total;
+
+  // ---- DONUT (sin USD, con % en sectores) ----
   destroyChart('sc-donut');
   const ctx = document.getElementById('sc-donut');
   if (ctx) {
     charts['sc-donut'] = new Chart(ctx.getContext('2d'), {
       type:'doughnut',
-      data:{ labels:AA_ASSETS, datasets:[{ data:AA_ASSETS.map(a=>aa[a]), backgroundColor:AA_COLORS.map(c=>c+'cc'), borderColor:'#ffffff', borderWidth:2 }] },
-      options:{ responsive:true, maintainAspectRatio:false, animation:{duration:300},
-        plugins:{ legend:{ display:true, position:'right', labels:{color:'#2a5a72',font:{size:10,family:'IBM Plex Mono'},boxWidth:10,padding:8} },
-          tooltip:{ backgroundColor:'#062D3F', bodyColor:'#fff', callbacks:{ label:ctx=>` ${ctx.label}: ${ctx.parsed.toFixed(1)}%` } } }
+      data:{ labels:AA_ASSETS, datasets:[{ data:AA_ASSETS.map(a=>aa[a]), backgroundColor:AA_COLORS.map(c=>c+'dd'), borderColor:'#fff', borderWidth:3 }] },
+      options:{ responsive:true, maintainAspectRatio:false, animation:{duration:400},
+        plugins:{
+          legend:{ display:true, position:'right', labels:{color:'#2a5a72',font:{size:10,family:'IBM Plex Mono'},boxWidth:10,padding:10,
+            generateLabels: chart => chart.data.labels.map((label,i)=>({
+              text: label+'  '+aa[label].toFixed(0)+'%',
+              fillStyle:AA_COLORS[i]+'dd', strokeStyle:'#fff', lineWidth:1, index:i
+            }))
+          }},
+          tooltip:{ backgroundColor:'#062D3F', bodyColor:'#fff', padding:10, callbacks:{ label:c=>` ${c.label}: ${c.parsed.toFixed(1)}%` }}
+        }
       },
+      plugins:[{ id:'pctLabels', afterDraw(chart) {
+        const c2=chart.ctx;
+        chart.data.datasets[0].data.forEach((val,i)=>{
+          if(val<6) return;
+          const meta=chart.getDatasetMeta(0), arc=meta.data[i];
+          const angle=(arc.startAngle+arc.endAngle)/2, r=(arc.innerRadius+arc.outerRadius)/2;
+          c2.save(); c2.font='bold 10px IBM Plex Mono'; c2.fillStyle='#fff';
+          c2.textAlign='center'; c2.textBaseline='middle';
+          c2.fillText(val.toFixed(0)+'%', arc.x+r*Math.cos(angle), arc.y+r*Math.sin(angle));
+          c2.restore();
+        });
+      }}]
     });
   }
 
-  // AA vs BMK bars
+  // ---- BARRAS vs BMK ----
   const barsEl = document.getElementById('sc-aa-bars');
   if (!barsEl) return;
 
-  const posColor = '#1a7a3c', negColor = '#c0392b', neutColor = '#0085CA';
-  barsEl.innerHTML = AA_ASSETS.map((asset, i) => {
-    const aaVal  = aa[asset];
-    const bmkVal = BMK[asset] || 0;
-    const diff   = +(aaVal - bmkVal).toFixed(1);
-    const signal = diff > 3 ? 'SOBREPONDERADO' : diff < -3 ? 'INFRAPONDERADO' : 'NEUTRAL';
-    const sigColor = diff > 3 ? posColor : diff < -3 ? negColor : neutColor;
-    const sigBg    = diff > 3 ? 'rgba(26,122,60,0.1)' : diff < -3 ? 'rgba(192,57,43,0.1)' : 'rgba(0,133,202,0.1)';
-    const maxVal = Math.max(aaVal, bmkVal, 5);
-
-    return `<div style="margin-bottom:14px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-        <div style="display:flex;align-items:center;gap:6px">
-          <span style="width:8px;height:8px;border-radius:2px;background:${AA_COLORS[i]};display:inline-block"></span>
-          <span style="font-size:12px;font-weight:600;color:var(--text1)">${asset}</span>
-        </div>
+  barsEl.innerHTML = AA_ASSETS.map((asset,i) => {
+    const aaVal=+aa[asset].toFixed(1), bmkVal=BMK[asset]||0, diff=+(aaVal-bmkVal).toFixed(1);
+    const isOver=diff>3, isUnder=diff<-3;
+    const sigT=isOver?'▲ SOBRE':isUnder?'▼ INFRA':'= NEUTRAL';
+    const sigC=isOver?'#1a7a3c':isUnder?'#c0392b':'#0085CA';
+    const maxBar=Math.max(aaVal,bmkVal,10)*1.2;
+    const bmkPct=(bmkVal/maxBar*100).toFixed(1), aaPct=(aaVal/maxBar*100).toFixed(1);
+    return `<div style="margin-bottom:20px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px">
         <div style="display:flex;align-items:center;gap:8px">
-          <span style="font-family:var(--mono);font-size:11px;color:var(--text3)">BMK ${bmkVal}%</span>
-          <span style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--text1)">${aaVal.toFixed(1)}%</span>
-          <span style="font-family:var(--mono);font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;background:${sigBg};color:${sigColor}">${signal}</span>
+          <span style="width:10px;height:10px;border-radius:2px;background:\${AA_COLORS[i]};display:inline-block"></span>
+          <span style="font-size:13px;font-weight:700;color:var(--text1)">\${asset}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-family:var(--mono);font-size:11px;color:var(--text3)">BMK <strong style="color:var(--text2)">\${bmkVal}%</strong></span>
+          <span style="font-family:var(--mono);font-size:15px;font-weight:800;color:\${AA_COLORS[i]}">\${aaVal.toFixed(1)}%</span>
+          <span style="font-family:var(--mono);font-size:9px;font-weight:700;padding:3px 8px;border-radius:4px;background:\${sigC}18;color:\${sigC};border:1px solid \${sigC}44">\${sigT}</span>
         </div>
       </div>
-      <div style="position:relative;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden">
-        <div style="position:absolute;top:0;left:0;height:100%;width:${(bmkVal/maxVal*100).toFixed(0)}%;background:rgba(6,45,63,0.2);border-radius:3px"></div>
-        <div style="position:absolute;top:0;left:0;height:100%;width:${(aaVal/maxVal*100).toFixed(0)}%;background:${AA_COLORS[i]};border-radius:3px;transition:width .4s"></div>
+      <div style="position:relative;height:12px;background:#e8f0f5;border-radius:6px;margin-bottom:18px">
+        <div style="position:absolute;top:0;left:0;height:100%;width:\${aaPct}%;background:\${AA_COLORS[i]};border-radius:6px;transition:width .5s;opacity:0.9"></div>
+        <div style="position:absolute;top:-4px;left:\${bmkPct}%;width:3px;height:20px;background:#062D3F;border-radius:2px;z-index:2"></div>
+        <div style="position:absolute;top:15px;left:\${bmkPct}%;transform:translateX(-50%);font-family:var(--mono);font-size:8px;color:#062D3F;font-weight:700;white-space:nowrap">▲ BMK</div>
       </div>
-      <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:9px;color:var(--text3);margin-top:2px">
-        <span>0%</span><span style="color:${sigColor}">${diff>0?'+':''}${diff}% vs BMK</span><span>${maxVal.toFixed(0)}%</span>
-      </div>
+      <div style="text-align:right;font-family:var(--mono);font-size:10px;color:\${sigC};font-weight:700">\${diff>0?'+':''}\${diff}% vs benchmark</div>
     </div>`;
   }).join('');
 
-  // Info rows: USD exposure and Duration (not in 100% allocation)
-  const domScAA = AA_SC[Object.entries(scProbs).sort((a,b)=>b[1]-a[1])[0][0]];
-  const usdInfo = Object.values(scProbs).reduce((sum, prob, i) => {
-    const sc = SCENARIOS[i];
-    return sum + (AA_SC[sc.id].USD_info || 0) * prob;
-  }, 0) / Object.values(scProbs).reduce((a,b)=>a+b,0);
-  const durInfo = Object.values(scProbs).reduce((sum, prob, i) => {
-    const sc = SCENARIOS[i];
-    return sum + (AA_SC[sc.id].Dur_info || 0) * prob;
-  }, 0) / Object.values(scProbs).reduce((a,b)=>a+b,0);
-
-  const infoHTML = `<div style="margin-top:16px;padding:12px;background:rgba(0,133,202,0.05);border-radius:8px;border:1px dashed rgba(0,133,202,0.2)">
-    <div style="font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:0.1em;margin-bottom:8px">PARÁMETROS INFORMATIVOS (no computan en 100%)</div>
-    <div style="display:flex;gap:24px">
-      <div>
-        <div style="font-family:var(--mono);font-size:10px;color:var(--text3)">Exposición USD</div>
-        <div style="font-family:var(--mono);font-size:18px;font-weight:700;color:#f59e0b">${usdInfo.toFixed(0)}%</div>
+  // Info box USD + Duración
+  const usdBmk=20, usdDiff=+(usdInfo-usdBmk).toFixed(0);
+  const durDiff=+(durInfo-4.0).toFixed(1);
+  const uS=usdDiff>3?{t:'▲ SOBRE',c:'#1a7a3c'}:usdDiff<-3?{t:'▼ INFRA',c:'#c0392b'}:{t:'= NEUTRAL',c:'#0085CA'};
+  const dS=durDiff>0.3?{t:'▲ LARGA',c:'#1a7a3c'}:durDiff<-0.3?{t:'▼ CORTA',c:'#c0392b'}:{t:'= NEUTRAL',c:'#0085CA'};
+  barsEl.insertAdjacentHTML('beforeend',`
+    <div style="margin-top:20px;padding:14px;background:rgba(0,133,202,0.05);border-radius:10px;border:1px dashed rgba(0,133,202,0.25)">
+      <div style="font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:0.12em;margin-bottom:12px">PARÁMETROS INFORMATIVOS</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div style="background:#fff;border-radius:8px;padding:12px;border:1px solid var(--border)">
+          <div style="font-family:var(--mono);font-size:9px;color:var(--text3);margin-bottom:4px">💵 EXPOSICIÓN USD</div>
+          <div style="display:flex;align-items:baseline;gap:8px">
+            <span style="font-family:var(--mono);font-size:22px;font-weight:800;color:#f59e0b">\${usdInfo.toFixed(0)}%</span>
+            <span style="font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:3px;background:\${uS.c}18;color:\${uS.c};border:1px solid \${uS.c}44">\${uS.t}</span>
+          </div>
+          <div style="font-family:var(--mono);font-size:9px;color:var(--text3);margin-top:2px">BMK: \${usdBmk}% · \${usdDiff>0?'+':''}\${usdDiff}%</div>
+        </div>
+        <div style="background:#fff;border-radius:8px;padding:12px;border:1px solid var(--border)">
+          <div style="font-family:var(--mono);font-size:9px;color:var(--text3);margin-bottom:4px">⏱ DURACIÓN</div>
+          <div style="display:flex;align-items:baseline;gap:8px">
+            <span style="font-family:var(--mono);font-size:22px;font-weight:800;color:var(--blue)">\${durInfo.toFixed(1)}</span>
+            <span style="font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:3px;background:\${dS.c}18;color:\${dS.c};border:1px solid \${dS.c}44">\${dS.t}</span>
+          </div>
+          <div style="font-family:var(--mono);font-size:9px;color:var(--text3);margin-top:2px">BMK: 4.0 · \${durDiff>0?'+':''}\${durDiff}</div>
+        </div>
       </div>
-      <div>
-        <div style="font-family:var(--mono);font-size:10px;color:var(--text3)">Duración cartera</div>
-        <div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--blue)">${durInfo.toFixed(1)}</div>
-        <div style="font-family:var(--mono);font-size:9px;color:var(--text3)">BMK: 4.0</div>
-      </div>
-    </div>
-  </div>`;
-  if (barsEl) barsEl.insertAdjacentHTML('beforeend', infoHTML);
+    </div>`);
 
-  // Strategies for dominant scenario
+    // Strategies for dominant scenario
   const domId = Object.entries(scProbs).sort((a,b)=>b[1]-a[1])[0][0];
   const domSc  = SCENARIOS.find(s=>s.id===domId);
   const stratEl = document.getElementById('sc-strat-content');
