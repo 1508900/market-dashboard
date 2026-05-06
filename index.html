@@ -386,7 +386,7 @@ canvas { display:block; }
   align-items:center;
   justify-content:center;
 }
-.upload-overlay.open { display:flex; }
+.upload-overlay.open { display:flex !important; }
 .upload-box {
   background:#fff;
   border:1px solid var(--border2);
@@ -2050,8 +2050,16 @@ function renderAll() {
 // ============================================================
 // UPLOAD UI
 // ============================================================
-function openUpload() { document.getElementById('upload-overlay').classList.add('open'); }
-function closeUpload() { document.getElementById('upload-overlay').classList.remove('open'); }
+function openUpload() {
+  const overlay = document.getElementById('upload-overlay');
+  overlay.classList.add('open');
+  overlay.style.display = 'flex';
+}
+function closeUpload() {
+  const overlay = document.getElementById('upload-overlay');
+  overlay.classList.remove('open');
+  overlay.style.display = 'none';
+}
 
 async function processFile(file) {
   const st = document.getElementById('upload-status');
