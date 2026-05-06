@@ -206,8 +206,10 @@ const YIELD_DEFAULTS = {
 };
 
 const CREDIT_DEFAULTS = [
-  { id: 'us_ig', name: 'Investment Grade', region: 'EEUU', type: 'ig', spread: 98,  change: -2 },
-  { id: 'us_hy', name: 'High Yield',       region: 'EEUU', type: 'hy', spread: 312, change: +8 },
+  { id: 'us_ig', name: 'Investment Grade', region: 'EEUU',   type: 'ig', spread: 98,  change: -2 },
+  { id: 'us_hy', name: 'High Yield',       region: 'EEUU',   type: 'hy', spread: 312, change: +8 },
+  { id: 'eu_ig', name: 'iTraxx EUR IG',    region: 'Europa', type: 'ig', spread: 62,  change: -1 },
+  { id: 'eu_hy', name: 'iTraxx Xover',     region: 'Europa', type: 'hy', spread: 310, change: +5 },
 ];
 
 // ---- MAIN LOAD FUNCTION ----
