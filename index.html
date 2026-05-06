@@ -2094,49 +2094,8 @@ async function processFile(file) {
 // ============================================================
 // INIT
 // ============================================================
-// ---- AUTO-LOAD EXCEL FROM REPO ----
-const EXCEL_URL = 'Datos_Claude.xlsx'; // fichero en la raíz del repo
-
-async function autoLoadExcel() {
-  const st = document.getElementById('upload-status');
-  const dot = document.getElementById('status-dot');
-  const statusText = document.getElementById('status-text');
-
-  // Show loading state in header
-  statusText.textContent = 'Cargando datos...';
-
-  try {
-    const res = await fetch(EXCEL_URL + '?t=' + Date.now(), { cache: 'no-cache' });
-    if (!res.ok) throw new Error('No se encontró el archivo');
-
-    const buffer = await res.arrayBuffer();
-    const file = new File([buffer], 'Datos_Claude.xlsx',
-      { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-
-    await loadExcel(file);
-
-    // Update header
-    dot.classList.add('active');
-    statusText.textContent = 'Datos Claude · ' + new Date().toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
-    document.getElementById('upload-btn').classList.add('loaded');
-    document.getElementById('upload-btn').innerHTML = '✓ Datos Claude';
-
-    renderAll();
-    closeUpload();
-
-  } catch(err) {
-    // File not found in repo — show manual upload modal
-    statusText.textContent = 'Sin datos';
-    openUpload();
-    if (st) {
-      st.style.color = '#6b8fa0';
-      st.textContent = 'No se encontró Datos_Claude.xlsx en el repositorio. Sube el archivo manualmente.';
-    }
-  }
-}
-
 document.addEventListener('DOMContentLoaded', () => {
-  // File input change
+  // File input
   document.getElementById('file-input').addEventListener('change', async e => {
     const file = e.target.files[0]; if (!file) return;
     await processFile(file);
