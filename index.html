@@ -530,6 +530,7 @@ canvas { display:block; }
       <button class="pbtn" onclick="setEqPeriod('3M',this)">3M</button>
       <button class="pbtn" onclick="setEqPeriod('YTD',this)">YTD</button>
       <button class="pbtn" onclick="setEqPeriod('1Y',this)">1A</button>
+      <button class="pbtn" onclick="setEqPeriod('3Y',this)">3A</button>
     </div>
   </div>
   <div class="cards-grid" id="eq-cards">
@@ -1279,7 +1280,7 @@ function selectIndex(id) {
   makeChart('det-chart', 'line', dates.map(d=>d.slice(5)), [lineDs(idx.name, closes, color, true)]);
 
   // Periods summary
-  const periods = ['1W','1M','3M','YTD','1Y'];
+  const periods = ['1W','1M','3M','YTD','1Y','3Y'];
   const periodsEl = document.getElementById('det-periods');
   periodsEl.innerHTML = periods.map(p => {
     const v = periodPerf(idx.dates, idx.closes, p);
