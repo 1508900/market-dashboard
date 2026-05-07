@@ -798,20 +798,20 @@ const TIPOS_MAP = {
   'GUKG10 Index':   { id:'uk10y', country:'UK', tenor:'10Y', name:'UK 10Y' },
   'GUKG30 Index':   { id:'uk30y', country:'UK', tenor:'30Y', name:'UK 30Y' },
   // Pendientes 2-10 (valor en col-1)
-  'USYC2Y10 Index': { id:'us_2_10',  country:'US', isPendiente:true, name:'US 2-10Y'  },
-  'DEYC2Y10 Index': { id:'de_2_10',  country:'DE', isPendiente:true, name:'DE 2-10Y'  },
-  'UKYC2Y10 Index': { id:'uk_2_10',  country:'UK', isPendiente:true, name:'UK 2-10Y'  },
-  'JPYC2Y10 Index': { id:'jp_2_10',  country:'JP', isPendiente:true, name:'JP 2-10Y'  },
+  'USYC2Y10 Index': { id:'us_2_10',  country:'US', name:'US 2-10Y'  },
+  'DEYC2Y10 Index': { id:'de_2_10',  country:'DE', name:'DE 2-10Y'  },
+  'UKYC2Y10 Index': { id:'uk_2_10',  country:'UK', name:'UK 2-10Y'  },
+  'JPYC2Y10 Index': { id:'jp_2_10',  country:'JP', name:'JP 2-10Y'  },
   // Pendientes 2-30 (valor en col-1)
-  'USYC2Y30 Index': { id:'us_2_30',  country:'US', isPendiente:true, name:'US 2-30Y'  },
-  'DEYC2Y30 Index': { id:'de_2_30',  country:'DE', isPendiente:true, name:'DE 2-30Y'  },
-  'UKYC2Y30 Index': { id:'uk_2_30',  country:'UK', isPendiente:true, name:'UK 2-30Y'  },
-  'JPYC2Y30 Index': { id:'jp_2_30',  country:'JP', isPendiente:true, name:'JP 2-30Y'  },
+  'USYC2Y30 Index': { id:'us_2_30',  country:'US', name:'US 2-30Y'  },
+  'DEYC2Y30 Index': { id:'de_2_30',  country:'DE', name:'DE 2-30Y'  },
+  'UKYC2Y30 Index': { id:'uk_2_30',  country:'UK', name:'UK 2-30Y'  },
+  'JPYC2Y30 Index': { id:'jp_2_30',  country:'JP', name:'JP 2-30Y'  },
   // Pendientes 10-30 (valor en col-1)
-  'USYC1030 Index': { id:'us_10_30', country:'US', isPendiente:true, name:'US 10-30Y' },
-  'DEYC1030 Index': { id:'de_10_30', country:'DE', isPendiente:true, name:'DE 10-30Y' },
-  'UKYC1030 Index': { id:'uk_10_30', country:'UK', isPendiente:true, name:'UK 10-30Y' },
-  'JPYC1030 Index': { id:'jp_10_30', country:'JP', isPendiente:true, name:'JP 10-30Y' },
+  'USYC1030 Index': { id:'us_10_30', country:'US', name:'US 10-30Y' },
+  'DEYC1030 Index': { id:'de_10_30', country:'DE', name:'DE 10-30Y' },
+  'UKYC1030 Index': { id:'uk_10_30', country:'UK', name:'UK 10-30Y' },
+  'JPYC1030 Index': { id:'jp_10_30', country:'JP', name:'JP 10-30Y' },
   // Tipos de referencia
   'EUR003M Index':  { id:'euribor3m',  isTipoRef:true, name:'Euribor 3M'  },
   'EUR012M Index':  { id:'euribor12m', isTipoRef:true, name:'Euribor 12M' },
@@ -992,7 +992,9 @@ function loadExcel(file) {
             const meta = TIPOS_MAP[ticker];
             const last = data.values[data.values.length-1];
             if (meta.isPendiente) {
-              D.pendientes[meta.id] = { ...meta, dates:data.dates, values:data.values, last };
+              // Convert to pb (x100)
+              const pbValues = data.values.map(v => +( v * 100).toFixed(1));
+              D.pendientes[meta.id] = { ...meta, dates:data.dates, values:pbValues, last: pbValues[pbValues.length-1] };
             } else if (meta.isTipoRef) {
               D.tiposRef[meta.id] = { ...meta, dates:data.dates, values:data.values, last };
             } else {
@@ -1449,8 +1451,11 @@ function renderRentaFija() {
   // Table with 2-10, 2-30 slopes
   const tableRows = countries.map(c => {
     const y2=getVal(c,'2Y'), y5=getVal(c,'5Y'), y10=getVal(c,'10Y'), y30=getVal(c,'30Y');
-    const s210  = y2!=null&&y10!=null  ? +(y10-y2).toFixed(2)  : null;
-    const s230  = y2!=null&&y30!=null  ? +(y30-y2).toFixed(2)  : null;
+    const p210 = D.pendientes['us_2_10']||D.pendientes['de_2_10']||D.pendientes['uk_2_10']||D.pendientes['jp_2_10'];
+    const pKey210 = c.toLowerCase()+'_2_10';
+    const pKey230 = c.toLowerCase()+'_2_30';
+    const s210 = D.pendientes[pKey210]?.last ?? (y2!=null&&y10!=null ? +(y10-y2).toFixed(2)*100 : null);
+    const s230 = D.pendientes[pKey230]?.last ?? (y2!=null&&y30!=null ? +(y30-y2).toFixed(2)*100 : null);
     const sCls  = v => v>0.1?'td-pos':v<-0.1?'td-neg':'';
     return `<tr>
       <td>${cFlags[c]} ${cNames[c]}</td>
@@ -1458,8 +1463,8 @@ function renderRentaFija() {
       <td class="td-val">${y5!=null?y5.toFixed(2)+'%':'—'}</td>
       <td class="td-val">${y10!=null?y10.toFixed(2)+'%':'—'}</td>
       <td class="td-val">${y30!=null?y30.toFixed(2)+'%':'—'}</td>
-      <td class="${sCls(s210)} td-val">${s210!=null?(s210>0?'+':'')+s210+'%':'—'}</td>
-      <td class="${sCls(s230)} td-val">${s230!=null?(s230>0?'+':'')+s230+'%':'—'}</td>
+      <td class="${sCls(s210)} td-val">${s210!=null?(s210>0?'+':'')+Math.round(s210)+'pb':'—'}</td>
+      <td class="${sCls(s230)} td-val">${s230!=null?(s230>0?'+':'')+Math.round(s230)+'pb':'—'}</td>
     </tr>`;
   }).join('');
 
@@ -1576,8 +1581,8 @@ function renderSlopeCharts(period) {
     datasets.forEach(ds => delete ds.labels);
     makeChart(canvasId, 'line', labels, datasets, {
       plugins:{ ...CHART_BASE.plugins, legend:{ display:true, labels:{color:'#2a5a72',font:{size:10,family:'IBM Plex Mono'}} },
-        tooltip:{ ...CHART_BASE.plugins.tooltip, callbacks:{ label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.y>=0?'+':''}${ctx.parsed.y.toFixed(2)}%` } } },
-      scales:{ ...CHART_BASE.scales, y:{ ...CHART_BASE.scales.y, ticks:{ ...CHART_BASE.scales.y.ticks, callback:v=>(v>=0?'+':'')+v.toFixed(2)+'%' } } },
+        tooltip:{ ...CHART_BASE.plugins.tooltip, callbacks:{ label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.y>=0?'+':''}${ctx.parsed.y.toFixed(0)} pb` } } },
+      scales:{ ...CHART_BASE.scales, y:{ ...CHART_BASE.scales.y, ticks:{ ...CHART_BASE.scales.y.ticks, callback:v=>(v>=0?'+':'')+v.toFixed(0)+' pb' } } },
     });
   });
 }
