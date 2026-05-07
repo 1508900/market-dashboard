@@ -984,9 +984,8 @@ function loadExcel(file) {
             const meta = TIPOS_MAP[ticker];
             const last = data.values[data.values.length-1];
             if (meta.isPendiente) {
-              // Convert to pb (x100)
-              const pbValues = data.values.map(v => +( v * 100).toFixed(1));
-              D.pendientes[meta.id] = { ...meta, dates:data.dates, values:pbValues, last: pbValues[pbValues.length-1] };
+              // Values already in pb from Bloomberg
+              D.pendientes[meta.id] = { ...meta, dates:data.dates, values:data.values, last };
             } else if (meta.isTipoRef) {
               D.tiposRef[meta.id] = { ...meta, dates:data.dates, values:data.values, last };
             } else {
@@ -1570,15 +1569,15 @@ function setSlopePeriod(p, btn) {
   if (btn) btn.classList.add('active');
   renderSlopeCharts(p);
 }
-
 function renderSlopeCharts(period) {
   const slopeTypes = [
     { id:'2-10', suffix:'_2_10',  canvasId:'slope-2-10-chart' },
     { id:'2-30', suffix:'_2_30',  canvasId:'slope-2-30-chart' },
     { id:'10-30',suffix:'_10_30', canvasId:'slope-10-30-chart' },
   ];
-  const colors = { US:'#0085CA', DE:'#22c55e', UK:'#a78bfa', JP:'#f59e0b' };
+  const colors = { US:'#1a2a3a', DE:'#6b7fa0', UK:'#c8a882', JP:'#c8993a' };
   const flags  = { US:'🇺🇸', DE:'🇩🇪', UK:'🇬🇧', JP:'🇯🇵' };
+  const legendOpts = { display:true, position:'top', align:'start', labels:{color:'#1a2a3a',font:{size:10,family:'IBM Plex Sans, sans-serif'},boxWidth:20,boxHeight:1.5,padding:10,usePointStyle:false} };
 
   slopeTypes.forEach(({ id, suffix, canvasId }) => {
     const datasets = [];
@@ -1587,22 +1586,24 @@ function renderSlopeCharts(period) {
       const key = c.toLowerCase() + suffix;
       const t = D.pendientes[key];
       if (!t || !t.dates.length) return;
-      const f = filterPeriod(t.dates, t.values, period === '3Y' ? null : period);
-      let dates = f.dates, values = f.values;
+      let dates, values;
       if (period === '3Y') {
         const cut = new Date(); cut.setFullYear(cut.getFullYear()-3);
         const pairs = t.dates.map((d,i)=>({d,v:t.values[i]})).filter(p=>new Date(p.d)>=cut);
         dates = pairs.map(p=>p.d); values = pairs.map(p=>p.v);
+      } else {
+        const f = filterPeriod(t.dates, t.values, period);
+        dates = f.dates; values = f.values;
       }
+      if (!dates.length) return;
       if (!labels.length) labels = dates.map(fmtDateLabel);
-      datasets.push({ ...lineDs(`${flags[c]} ${c}`, values, colors[c]), labels: dates.map(fmtDateLabel) });
+      datasets.push({ ...lineDs(flags[c]+' '+c, values, colors[c]) });
     });
     if (!datasets.length) return;
-    datasets.forEach(ds => delete ds.labels);
     makeChart(canvasId, 'line', labels, datasets, {
-      plugins:{ ...CHART_BASE.plugins, legend:{ display:true, position:'top', align:'start', labels:{color:'#1a2a3a',font:{size:10,family:'IBM Plex Sans, sans-serif'},boxWidth:20,boxHeight:1.5,padding:10,usePointStyle:false} },
-        tooltip:{ ...CHART_BASE.plugins.tooltip, callbacks:{ label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.y>=0?'+':''}${ctx.parsed.y.toFixed(0)} pb` } } },
-      scales:{ ...CHART_BASE.scales, y:{ ...CHART_BASE.scales.y, ticks:{ ...CHART_BASE.scales.y.ticks, callback:v=>(v>=0?'+':'')+v.toFixed(0)+' pb' } } },
+      plugins:{ ...CHART_BASE.plugins, legend:legendOpts,
+        tooltip:{ ...CHART_BASE.plugins.tooltip, callbacks:{ label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.y>=0?'+':''}${Math.round(ctx.parsed.y)} pb` } } },
+      scales:{ ...CHART_BASE.scales, y:{ ...CHART_BASE.scales.y, ticks:{ ...CHART_BASE.scales.y.ticks, callback:v=>(v>=0?'+':'')+Math.round(v)+' pb' } } },
     });
   });
 }
