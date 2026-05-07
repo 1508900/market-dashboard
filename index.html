@@ -863,10 +863,15 @@ function parseSheet(sheet, mapObj) {
   });
 
   // Auto-detect if value is at col+1 or col-1 (BBG slope format)
+  // For tickers marked isPendiente in mapObj, always use col-1
   const sampleRows = rows.slice(tickerIdx + 1, tickerIdx + 10).filter(Boolean);
   const valueOffsets = {};
   Object.keys(colMap).forEach(colStr => {
     const col = +colStr;
+    const ticker = colMap[col];
+    const meta = mapObj[ticker];
+    // If explicitly marked as pendiente, always col-1
+    if (meta && meta.isPendiente) { valueOffsets[col] = -1; return; }
     let posCount = 0, negCount = 0;
     sampleRows.forEach(row => {
       if (typeof row[col + 1] === 'number') posCount++;
@@ -1166,7 +1171,14 @@ const CHART_BASE = {
 // Helper: format date label as "Mar-26"
 function fmtDateLabel(d) {
   try {
-    const dt = new Date(d);
+    // d can be full ISO "2025-02-08" or sliced "02-08"
+    let dt;
+    if (d && d.length === 5 && d[2] === '-') {
+      // MM-DD format — assume current year range
+      dt = new Date('2025-' + d);
+    } else {
+      dt = new Date(d);
+    }
     if (isNaN(dt)) return d;
     const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
     return months[dt.getMonth()] + '-' + String(dt.getFullYear()).slice(2);
