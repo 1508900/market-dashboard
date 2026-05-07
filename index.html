@@ -999,6 +999,9 @@ function loadExcel(file) {
               D.tipos[meta.id] = { ...meta, dates:data.dates, values:data.values, last };
             }
           });
+          console.log('Tipos:', Object.keys(D.tipos));
+          console.log('Pendientes:', Object.keys(D.pendientes));
+          console.log('TiposRef:', Object.keys(D.tiposRef));
         }
 
         // SPREADS
