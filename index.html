@@ -679,30 +679,30 @@ canvas { display:block; }
 <section class="section" id="sec-escenarios">
   <div class="sec-title"><span>09</span>Escenarios Macro &amp; Asset Allocation</div>
   <div style="font-size:12px;color:var(--text3);margin-bottom:20px;line-height:1.6">
-    Probabilidades calculadas automáticamente según indicadores de mercado. Ajusta los sliders para ver el asset allocation resultante vs el benchmark (50% Bolsa · 20% RF · 20% USD · 5% Oro · Duración 4).
+    Probabilidades normalizadas al 100%. Ajusta los sliders para ver el asset allocation vs benchmark (50% Bolsa · 25% RF Gob · 20% RF Cred · 5% Oro · Dur 4 · USD 20%).
   </div>
 
-  <!-- TOP: scenario cards with sliders -->
-  <div id="sc-cards" style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:24px"></div>
-
-  <!-- BOTTOM: allocation + donut per scenario -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-    <!-- Left: AA vs BMK bars -->
-    <div class="chart-panel">
-      <div class="cp-title">Asset Allocation resultante vs Benchmark</div>
-      <div id="sc-aa-bars"></div>
-    </div>
-    <!-- Right: donut + strategies -->
-    <div style="display:flex;flex-direction:column;gap:16px">
+  <!-- TOP ROW: cards left | donut+strategies right -->
+  <div style="display:grid;grid-template-columns:1fr 420px;gap:16px;margin-bottom:20px">
+    <!-- LEFT: scenario cards -->
+    <div id="sc-cards" style="display:flex;flex-direction:column;gap:10px"></div>
+    <!-- RIGHT: donut + strategies -->
+    <div style="display:flex;flex-direction:column;gap:12px">
       <div class="chart-panel">
         <div class="cp-title">Exposición ponderada por escenario</div>
-        <div class="chart-wrap" style="height:200px"><canvas id="sc-donut"></canvas></div>
+        <div class="chart-wrap" style="height:220px"><canvas id="sc-donut"></canvas></div>
       </div>
       <div class="chart-panel" id="sc-strategies">
         <div class="cp-title">Estrategias destacadas</div>
         <div id="sc-strat-content"></div>
       </div>
     </div>
+  </div>
+
+  <!-- BOTTOM ROW: AA vs BMK bars -->
+  <div class="chart-panel">
+    <div class="cp-title">Asset Allocation resultante vs Benchmark</div>
+    <div id="sc-aa-bars" style="padding:8px 0"></div>
   </div>
 </section>
 
@@ -2320,31 +2320,32 @@ function updateAAChart() {
   const usdInfo = SCENARIOS.reduce((s,sc) => s + (AA_SC[sc.id].USD_info||0) * scProbs[sc.id], 0) / total;
   const durInfo = SCENARIOS.reduce((s,sc) => s + (AA_SC[sc.id].Dur_info||0) * scProbs[sc.id], 0) / total;
 
-  // ---- DONUT (sin USD, con % en sectores) ----
+  // DONUT
   destroyChart('sc-donut');
-  const ctx = document.getElementById('sc-donut');
-  if (ctx) {
-    charts['sc-donut'] = new Chart(ctx.getContext('2d'), {
+  const dctx = document.getElementById('sc-donut');
+  if (dctx) {
+    charts['sc-donut'] = new Chart(dctx.getContext('2d'), {
       type:'doughnut',
       data:{ labels:AA_ASSETS, datasets:[{ data:AA_ASSETS.map(a=>aa[a]), backgroundColor:AA_COLORS.map(c=>c+'dd'), borderColor:'#fff', borderWidth:3 }] },
       options:{ responsive:true, maintainAspectRatio:false, animation:{duration:400},
         plugins:{
           legend:{ display:true, position:'right', labels:{color:'#2a5a72',font:{size:10,family:'IBM Plex Mono'},boxWidth:10,padding:10,
-            generateLabels: chart => chart.data.labels.map((label,i)=>({
-              text: label+'  '+aa[label].toFixed(0)+'%',
-              fillStyle:AA_COLORS[i]+'dd', strokeStyle:'#fff', lineWidth:1, index:i
-            }))
+            generateLabels: function(chart) {
+              return chart.data.labels.map(function(label,i) {
+                return { text:label+'  '+aa[label].toFixed(0)+'%', fillStyle:AA_COLORS[i]+'dd', strokeStyle:'#fff', lineWidth:1, index:i };
+              });
+            }
           }},
-          tooltip:{ backgroundColor:'#062D3F', bodyColor:'#fff', padding:10, callbacks:{ label:c=>` ${c.label}: ${c.parsed.toFixed(1)}%` }}
+          tooltip:{ backgroundColor:'#062D3F', bodyColor:'#fff', padding:10, callbacks:{ label:function(c){ return ' '+c.label+': '+c.parsed.toFixed(1)+'%'; } }}
         }
       },
-      plugins:[{ id:'pctLabels', afterDraw(chart) {
-        const c2=chart.ctx;
-        chart.data.datasets[0].data.forEach((val,i)=>{
-          if(val<6) return;
-          const meta=chart.getDatasetMeta(0), arc=meta.data[i];
-          const angle=(arc.startAngle+arc.endAngle)/2, r=(arc.innerRadius+arc.outerRadius)/2;
-          c2.save(); c2.font='bold 10px IBM Plex Mono'; c2.fillStyle='#fff';
+      plugins:[{ id:'pctLabels', afterDraw:function(chart) {
+        var c2=chart.ctx;
+        chart.data.datasets[0].data.forEach(function(val,i) {
+          if(val<7) return;
+          var meta=chart.getDatasetMeta(0), arc=meta.data[i];
+          var angle=(arc.startAngle+arc.endAngle)/2, r=(arc.innerRadius+arc.outerRadius)/2;
+          c2.save(); c2.font='bold 11px IBM Plex Mono'; c2.fillStyle='#fff';
           c2.textAlign='center'; c2.textBaseline='middle';
           c2.fillText(val.toFixed(0)+'%', arc.x+r*Math.cos(angle), arc.y+r*Math.sin(angle));
           c2.restore();
@@ -2353,192 +2354,67 @@ function updateAAChart() {
     });
   }
 
-  // ---- BARRAS vs BMK ----
-  const barsEl = document.getElementById('sc-aa-bars');
+  // BARRAS — clean style, thick bars, neutral/infra/sobre
+  var barsEl = document.getElementById('sc-aa-bars');
   if (!barsEl) return;
 
-  barsEl.innerHTML = AA_ASSETS.map((asset,i) => {
-    const aaVal=+aa[asset].toFixed(1), bmkVal=BMK[asset]||0, diff=+(aaVal-bmkVal).toFixed(1);
-    const isOver=diff>3, isUnder=diff<-3;
-    const sigT=isOver?'▲ SOBRE':isUnder?'▼ INFRA':'= NEUTRAL';
-    const sigC=isOver?'#1a7a3c':isUnder?'#c0392b':'#0085CA';
-    const maxBar=Math.max(aaVal,bmkVal,10)*1.2;
-    const bmkPct=(bmkVal/maxBar*100).toFixed(1), aaPct=(aaVal/maxBar*100).toFixed(1);
-    return `<div style="margin-bottom:20px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px">
-        <div style="display:flex;align-items:center;gap:8px">
-          <span style="width:10px;height:10px;border-radius:2px;background:\${AA_COLORS[i]};display:inline-block"></span>
-          <span style="font-size:13px;font-weight:700;color:var(--text1)">\${asset}</span>
-        </div>
-        <div style="display:flex;align-items:center;gap:10px">
-          <span style="font-family:var(--mono);font-size:11px;color:var(--text3)">BMK <strong style="color:var(--text2)">\${bmkVal}%</strong></span>
-          <span style="font-family:var(--mono);font-size:15px;font-weight:800;color:\${AA_COLORS[i]}">\${aaVal.toFixed(1)}%</span>
-          <span style="font-family:var(--mono);font-size:9px;font-weight:700;padding:3px 8px;border-radius:4px;background:\${sigC}18;color:\${sigC};border:1px solid \${sigC}44">\${sigT}</span>
-        </div>
-      </div>
-      <div style="position:relative;height:12px;background:#e8f0f5;border-radius:6px;margin-bottom:18px">
-        <div style="position:absolute;top:0;left:0;height:100%;width:\${aaPct}%;background:\${AA_COLORS[i]};border-radius:6px;transition:width .5s;opacity:0.9"></div>
-        <div style="position:absolute;top:-4px;left:\${bmkPct}%;width:3px;height:20px;background:#062D3F;border-radius:2px;z-index:2"></div>
-        <div style="position:absolute;top:15px;left:\${bmkPct}%;transform:translateX(-50%);font-family:var(--mono);font-size:8px;color:#062D3F;font-weight:700;white-space:nowrap">▲ BMK</div>
-      </div>
-      <div style="text-align:right;font-family:var(--mono);font-size:10px;color:\${sigC};font-weight:700">\${diff>0?'+':''}\${diff}% vs benchmark</div>
-    </div>`;
-  }).join('');
+  var barsHtml = '';
+  AA_ASSETS.forEach(function(asset, i) {
+    var aaVal = +aa[asset].toFixed(1);
+    var bmkVal = BMK[asset] || 0;
+    var diff = +(aaVal - bmkVal).toFixed(1);
+    var isOver = diff > 3, isUnder = diff < -3;
+    var sigT = isOver ? 'SOBRE' : isUnder ? 'INFRA' : 'NEUTRAL';
+    var sigC = isOver ? '#1a7a3c' : isUnder ? '#c0392b' : '#0085CA';
+    var barColor = isOver ? '#1a7a3c' : isUnder ? '#c0392b' : '#0085CA';
+    var maxBar = Math.max(aaVal, bmkVal, 5) * 1.15;
+    var bmkPct = (bmkVal / maxBar * 100).toFixed(1);
+    var aaPct  = (aaVal  / maxBar * 100).toFixed(1);
+    var diffStr = (diff > 0 ? '+' : '') + diff + '% vs BMK';
 
-  // Info box USD + Duración
-  const usdBmk=20, usdDiff=+(usdInfo-usdBmk).toFixed(0);
-  const durDiff=+(durInfo-4.0).toFixed(1);
-  const uS=usdDiff>3?{t:'▲ SOBRE',c:'#1a7a3c'}:usdDiff<-3?{t:'▼ INFRA',c:'#c0392b'}:{t:'= NEUTRAL',c:'#0085CA'};
-  const dS=durDiff>0.3?{t:'▲ LARGA',c:'#1a7a3c'}:durDiff<-0.3?{t:'▼ CORTA',c:'#c0392b'}:{t:'= NEUTRAL',c:'#0085CA'};
-  barsEl.insertAdjacentHTML('beforeend',`
-    <div style="margin-top:20px;padding:14px;background:rgba(0,133,202,0.05);border-radius:10px;border:1px dashed rgba(0,133,202,0.25)">
-      <div style="font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:0.12em;margin-bottom:12px">PARÁMETROS INFORMATIVOS</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div style="background:#fff;border-radius:8px;padding:12px;border:1px solid var(--border)">
-          <div style="font-family:var(--mono);font-size:9px;color:var(--text3);margin-bottom:4px">💵 EXPOSICIÓN USD</div>
-          <div style="display:flex;align-items:baseline;gap:8px">
-            <span style="font-family:var(--mono);font-size:22px;font-weight:800;color:#f59e0b">\${usdInfo.toFixed(0)}%</span>
-            <span style="font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:3px;background:\${uS.c}18;color:\${uS.c};border:1px solid \${uS.c}44">\${uS.t}</span>
-          </div>
-          <div style="font-family:var(--mono);font-size:9px;color:var(--text3);margin-top:2px">BMK: \${usdBmk}% · \${usdDiff>0?'+':''}\${usdDiff}%</div>
-        </div>
-        <div style="background:#fff;border-radius:8px;padding:12px;border:1px solid var(--border)">
-          <div style="font-family:var(--mono);font-size:9px;color:var(--text3);margin-bottom:4px">⏱ DURACIÓN</div>
-          <div style="display:flex;align-items:baseline;gap:8px">
-            <span style="font-family:var(--mono);font-size:22px;font-weight:800;color:var(--blue)">\${durInfo.toFixed(1)}</span>
-            <span style="font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:3px;background:\${dS.c}18;color:\${dS.c};border:1px solid \${dS.c}44">\${dS.t}</span>
-          </div>
-          <div style="font-family:var(--mono);font-size:9px;color:var(--text3);margin-top:2px">BMK: 4.0 · \${durDiff>0?'+':''}\${durDiff}</div>
-        </div>
-      </div>
-    </div>`);
-
-    // Strategies for dominant scenario
-  const domId = Object.entries(scProbs).sort((a,b)=>b[1]-a[1])[0][0];
-  const domSc  = SCENARIOS.find(s=>s.id===domId);
-  const stratEl = document.getElementById('sc-strat-content');
-  if (stratEl && domSc) {
-    const typeIcon = { buy:'🟢', sell:'🔵', neutral:'⚪' };
-    stratEl.innerHTML = `<div style="font-size:11px;color:var(--text3);margin-bottom:10px">Escenario dominante: <strong style="color:${domSc.color}">${domSc.icon} ${domSc.name}</strong></div>` +
-      domSc.strategies.map(s => `<div style="padding:8px 0;border-bottom:1px solid var(--border)">
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
-          <span>${typeIcon[s.type]}</span>
-          <span style="font-size:12px;font-weight:600;color:var(--text1)">${s.label}</span>
-        </div>
-        <div style="font-size:11px;color:var(--text3);padding-left:20px">${s.desc}</div>
-      </div>`).join('') +
-      `<div style="margin-top:10px;padding:8px;background:rgba(0,133,202,0.06);border-radius:6px;border-left:3px solid var(--blue)">
-        <div style="font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:0.08em;margin-bottom:4px">LEYENDA ESTRATEGIAS</div>
-        <div style="font-size:10px;color:var(--text3);line-height:1.8">🟢 Estrategias recomendadas · 🔵 Estrategias de libro · ⚪ Posición neutral</div>
-      </div>`;
-  }
-}
-
-// ============================================================
-// NAVIGATION
-// ============================================================
-let activeSection = 'bolsa';
-
-function showSection(name, btn) {
-  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
-  document.getElementById('sec-'+name).classList.add('active');
-  if (btn) btn.classList.add('active');
-  activeSection = name;
-
-  if (!D.loaded) return;
-
-  switch(name) {
-    case 'bolsa':        renderBolsa(); break;
-    case 'valoracion':   renderValoracion(); break;
-    case 'renta-fija':   renderRentaFija(); break;
-    case 'credito':      renderCredito(); break;
-    case 'mmpp':         renderMMPP(); break;
-    case 'correlaciones':renderCorrelaciones(); break;
-    case 'volatilidad':  renderVolatilidad(); break;
-    case 'fg':           renderFG(); break;
-    case 'escenarios':   renderEscenarios(); break;
-  }
-}
-
-function renderAll() {
-  buildTicker();
-  showSection(activeSection, document.querySelector(`.nav-btn.active`));
-  // Always render FG and scenarios (they work without data)
-  renderFG();
-  renderEscenarios();
-}
-
-// ============================================================
-// ============================================================
-// UPLOAD UI
-// ============================================================
-function openUpload() {
-  const overlay = document.getElementById('upload-overlay');
-  overlay.classList.add('open');
-  overlay.style.display = 'flex';
-}
-function closeUpload() {
-  const overlay = document.getElementById('upload-overlay');
-  overlay.classList.remove('open');
-  overlay.style.display = 'none';
-}
-
-async function processFile(file) {
-  const st = document.getElementById('upload-status');
-  st.style.color = 'var(--blue2)';
-  st.textContent = '⏳ Procesando...';
-  try {
-    await loadExcel(file);
-    const idxCount = Object.keys(D.bolsa).length;
-    const mmCount  = Object.keys(D.mmpp).length;
-    const tipoCount= Object.keys(D.tipos).length;
-    const spCount  = Object.keys(D.spreads).length;
-    st.style.color = 'var(--green)';
-    st.textContent = `✓ ${idxCount} índices · ${mmCount} mat. primas · ${tipoCount} tipos · ${spCount} spreads`;
-
-    // Update header
-    const dot = document.getElementById('status-dot');
-    dot.classList.add('active');
-    document.getElementById('status-text').textContent = file.name.replace('.xlsx','');
-    document.getElementById('upload-btn').classList.add('loaded');
-    document.getElementById('upload-btn').textContent = '✓ ' + file.name.split('.')[0];
-
-    setTimeout(() => {
-      closeUpload();
-      renderAll();
-    }, 800);
-  } catch(err) {
-    st.style.color = 'var(--red)';
-    st.textContent = '✗ Error: ' + err.message;
-    console.error(err);
-  }
-}
-
-// ============================================================
-// INIT
-// ============================================================
-document.addEventListener('DOMContentLoaded', () => {
-  // File input
-  document.getElementById('file-input').addEventListener('change', async e => {
-    const file = e.target.files[0]; if (!file) return;
-    await processFile(file);
+    barsHtml += '<div style="margin-bottom:22px">';
+    // Header
+    barsHtml += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">';
+    barsHtml += '<span style="font-size:13px;font-weight:700;color:var(--text1);font-family:var(--mono)">' + asset + '</span>';
+    barsHtml += '<div style="display:flex;align-items:center;gap:12px">';
+    barsHtml += '<span style="font-family:var(--mono);font-size:11px;color:var(--text3)">BMK <b style="color:var(--text2)">' + bmkVal + '%</b></span>';
+    barsHtml += '<span style="font-family:var(--mono);font-size:16px;font-weight:800;color:' + barColor + '">' + aaVal.toFixed(1) + '%</span>';
+    barsHtml += '<span style="font-family:var(--mono);font-size:10px;font-weight:700;padding:3px 10px;border-radius:4px;background:' + sigC + '18;color:' + sigC + ';min-width:62px;text-align:center">' + sigT + '</span>';
+    barsHtml += '</div></div>';
+    // Bar track
+    barsHtml += '<div style="position:relative;height:14px;background:#e8eef2;border-radius:7px;margin-bottom:6px">';
+    barsHtml += '<div style="position:absolute;top:0;left:0;height:100%;width:' + aaPct + '%;background:' + barColor + ';border-radius:7px;transition:width .5s"></div>';
+    // BMK marker
+    barsHtml += '<div style="position:absolute;top:-4px;left:' + bmkPct + '%;width:3px;height:22px;background:#062D3F;border-radius:2px;z-index:2"></div>';
+    barsHtml += '</div>';
+    // Diff label
+    barsHtml += '<div style="text-align:right;font-family:var(--mono);font-size:10px;color:' + sigC + ';font-weight:700">' + diffStr + '</div>';
+    barsHtml += '</div>';
   });
+  barsEl.innerHTML = barsHtml;
 
-  // Drag & drop
-  const dz = document.getElementById('drop-zone');
-  dz.addEventListener('dragover', e=>{ e.preventDefault(); dz.classList.add('over'); });
-  dz.addEventListener('dragleave', ()=>dz.classList.remove('over'));
-  dz.addEventListener('drop', async e=>{
-    e.preventDefault(); dz.classList.remove('over');
-    const file = e.dataTransfer.files[0]; if(file) await processFile(file);
-  });
+  // Info USD + Duración
+  var usdBmk = 20, usdDiff = +(usdInfo - usdBmk).toFixed(0);
+  var durDiff = +(durInfo - 4.0).toFixed(1);
+  var uSt = usdDiff > 3 ? 'SOBRE' : usdDiff < -3 ? 'INFRA' : 'NEUTRAL';
+  var uSc = usdDiff > 3 ? '#1a7a3c' : usdDiff < -3 ? '#c0392b' : '#0085CA';
+  var dSt = durDiff > 0.3 ? 'LARGA' : durDiff < -0.3 ? 'CORTA' : 'NEUTRAL';
+  var dSc = durDiff > 0.3 ? '#1a7a3c' : durDiff < -0.3 ? '#c0392b' : '#0085CA';
 
-  renderFG();
-  renderEscenarios();
-  openUpload();
-});
-</script>
-<script src="assets/js/ppt-export.js"></script>
-</body>
-</html>
+  var infoHtml = '<div style="margin-top:24px;display:grid;grid-template-columns:1fr 1fr;gap:12px">';
+  infoHtml += '<div style="background:var(--bg3);border-radius:8px;padding:14px;border:1px solid var(--border)">';
+  infoHtml += '<div style="font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:0.1em;margin-bottom:6px">💵 USD EXPOSURE</div>';
+  infoHtml += '<div style="font-family:var(--mono);font-size:24px;font-weight:800;color:#f59e0b">' + usdInfo.toFixed(0) + '%';
+  infoHtml += ' <span style="font-size:10px;padding:2px 8px;border-radius:4px;background:' + uSc + '18;color:' + uSc + '">' + uSt + '</span></div>';
+  infoHtml += '<div style="font-family:var(--mono);font-size:9px;color:var(--text3);margin-top:4px">BMK ' + usdBmk + '% · ' + (usdDiff > 0 ? '+' : '') + usdDiff + '%</div>';
+  infoHtml += '</div>';
+  infoHtml += '<div style="background:var(--bg3);border-radius:8px;padding:14px;border:1px solid var(--border)">';
+  infoHtml += '<div style="font-family:var(--mono);font-size:9px;color:var(--text3);letter-spacing:0.1em;margin-bottom:6px">⏱ DURACIÓN</div>';
+  infoHtml += '<div style="font-family:var(--mono);font-size:24px;font-weight:800;color:var(--blue)">' + durInfo.toFixed(1);
+  infoHtml += ' <span style="font-size:10px;padding:2px 8px;border-radius:4px;background:' + dSc + '18;color:' + dSc + '">' + dSt + '</span></div>';
+  infoHtml += '<div style="font-family:var(--mono);font-size:9px;color:var(--text3);margin-top:4px">BMK 4.0 · ' + (durDiff > 0 ? '+' : '') + durDiff + '</div>';
+  infoHtml += '</div></div>';
+
+  barsEl.insertAdjacentHTML('beforeend', infoHtml);
+
+
