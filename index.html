@@ -2295,8 +2295,19 @@ function renderEscenarios() {
 }
 
 function updateScenario(id, val) {
-  scProbs[id] = +val;
-  // Update just the percentage labels without re-rendering cards
+  val = +val;
+  // Si se sube a >95, poner los demás a 0 (exclusivo)
+  if (val >= 95) {
+    SCENARIOS.forEach(sc => { scProbs[sc.id] = sc.id === id ? 100 : 0; });
+    // Sync sliders
+    SCENARIOS.forEach(sc => {
+      const slider = document.querySelector('input[oninput*="' + sc.id + '"]');
+      if (slider) slider.value = scProbs[sc.id];
+    });
+  } else {
+    scProbs[id] = val;
+  }
+  // Update % labels
   const total = Object.values(scProbs).reduce((a,b)=>a+b, 0);
   SCENARIOS.forEach(sc => {
     const el = document.getElementById('scv-'+sc.id);
@@ -2367,7 +2378,7 @@ function updateAAChart() {
     var sigT = isOver ? 'SOBRE' : isUnder ? 'INFRA' : 'NEUTRAL';
     var sigC = isOver ? '#1a7a3c' : isUnder ? '#c0392b' : '#0085CA';
     var barColor = isOver ? '#1a7a3c' : isUnder ? '#c0392b' : '#0085CA';
-    var maxBar = Math.max(aaVal, bmkVal, 5) * 1.15;
+    var maxBar = 100; // always 0-100% scale
     var bmkPct = (bmkVal / maxBar * 100).toFixed(1);
     var aaPct  = (aaVal  / maxBar * 100).toFixed(1);
     var diffStr = (diff > 0 ? '+' : '') + diff + '% vs BMK';
