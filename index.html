@@ -721,6 +721,7 @@ const D = {
   spreads: {},    // id → { name, dates[], values[] }
   ey:      {},      // id → { dates[], values[] } earning yield
   fcfy:    {},      // id → { dates[], values[] } free cash flow yield
+  eps:     {},      // id → eps 6M % change
   mmpp: {},       // id → { name, unit, group, dates[], closes[] }
   inflation: {},  // id → { name, dates[], values[] }
   loaded: false,
@@ -829,6 +830,12 @@ const SPREAD_MAP = {
 };
 
 const PER_MAP = {
+  'NDX Index':'ndx','SPX Index':'spx','SX5E Index':'sx5e','MXWD Index':'mxwd',
+  'NKY Index':'nky','UBXXMAG7 Index':'mag7','RTY Index':'rty','MXEF Index':'mxef',
+  'MXLA Index':'mxla','MXCN Index':'mxcn',
+};
+
+const EPS_MAP = {
   'NDX Index':'ndx','SPX Index':'spx','SX5E Index':'sx5e','MXWD Index':'mxwd',
   'NKY Index':'nky','UBXXMAG7 Index':'mag7','RTY Index':'rty','MXEF Index':'mxef',
   'MXLA Index':'mxla','MXCN Index':'mxcn',
@@ -1031,6 +1038,34 @@ function loadExcel(file) {
             }
           });
           console.log('FCFY loaded:', Object.keys(D.fcfy));
+        }
+
+        // EPS — 6M % change (single row, not time series)
+        const epsSheet = wb.Sheets['EPS valores'];
+        if (epsSheet) {
+          const epsRows = XLSX.utils.sheet_to_json(epsSheet, { header:1, defval:null, raw:true, cellDates:true });
+          // Find ticker row (row 3, index 2)
+          let tickerRow = null, tickerIdx = -1;
+          for (let i=0; i<Math.min(epsRows.length,6); i++) {
+            if (epsRows[i] && epsRows[i].some(c=>typeof c==='string' && EPS_MAP[c.trim()])) {
+              tickerRow = epsRows[i]; tickerIdx = i; break;
+            }
+          }
+          if (tickerRow) {
+            // Next row has values
+            const dataRow = epsRows[tickerIdx+1];
+            if (dataRow) {
+              tickerRow.forEach((cell, col) => {
+                if (typeof cell==='string' && EPS_MAP[cell.trim()]) {
+                  const id = EPS_MAP[cell.trim()];
+                  // Value is in col itself (not col+1) — first numeric value in same col
+                  const v = typeof dataRow[col]==='number' ? dataRow[col] : (typeof dataRow[col+1]==='number' ? dataRow[col+1] : null);
+                  if (v !== null) D.eps[id] = +v.toFixed(2);
+                }
+              });
+            }
+          }
+          console.log('EPS loaded:', D.eps);
         }
 
         // VALORACIÓN — estructura diferente: tickers en fila 3 (sin col vacía), fecha en col par, valor en col impar
@@ -1403,53 +1438,154 @@ function renderValoracion() {
   const idxList = Object.values(D.bolsa).filter(x=>!x.isFx&&!x.isVol&&x.per);
   if (!idxList.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">📊</div><div class="empty-text">Sin datos de valoración</div></div>'; return; }
 
-  const perRef = {
-    ndx:{cheap:22,fair:28,exp:35}, spx:{cheap:16,fair:20,exp:26},
-    sx5e:{cheap:11,fair:14,exp:18}, mxwd:{cheap:14,fair:18,exp:22},
-    nky:{cheap:14,fair:18,exp:23}, mag7:{cheap:28,fair:35,exp:45},
-    rty:{cheap:18,fair:24,exp:32}, mxef:{cheap:9,fair:13,exp:17},
-    mxla:{cheap:7,fair:10,exp:14}, mxcn:{cheap:8,fair:11,exp:15},
+  // PER ranges (min, avg, max) — historical reference ranges
+  const perRanges = {
+    ndx: { min:18, avg:28, max:45, name:'Nasdaq 100'    },
+    spx: { min:13, avg:18, max:28, name:'S&P 500'       },
+    sx5e:{ min:10, avg:14, max:20, name:'Euro Stoxx 50' },
+    mxwd:{ min:12, avg:17, max:24, name:'MSCI World'    },
+    nky: { min:12, avg:18, max:26, name:'Nikkei 225'    },
+    mag7:{ min:22, avg:32, max:50, name:'Mag 7'         },
+    rty: { min:15, avg:22, max:35, name:'Russell 2000'  },
+    mxef:{ min:8,  avg:12, max:18, name:'MSCI EM'       },
+    mxla:{ min:6,  avg:10, max:15, name:'MSCI LatAm'    },
+    mxcn:{ min:7,  avg:11, max:17, name:'MSCI China'    },
   };
 
-  const maxPer = Math.max(...idxList.map(i=>i.per), 45);
+  // Build rows HTML
+  var rowsHtml = idxList.map(idx => {
+    const r = perRanges[idx.id] || { min:10, avg:16, max:25 };
+    const per = idx.per;
+    const eps = D.eps[idx.id];
+    // Position of current PER in range [min, max]
+    const range = r.max - r.min;
+    const pos = Math.max(0, Math.min(100, (per - r.min) / range * 100));
+    const avgPos = ((r.avg - r.min) / range * 100).toFixed(1);
+    // Color: below avg = green, near max = red
+    const color = per <= r.avg ? '#1a7a3c' : per >= r.max * 0.9 ? '#c0392b' : '#c47d0e';
+    const label = per <= r.avg ? 'BAJO' : per >= r.max * 0.9 ? 'ALTO' : 'MEDIO';
+    const epsColor = eps == null ? '#6b8fa0' : eps >= 10 ? '#1a7a3c' : eps >= 0 ? '#c47d0e' : '#c0392b';
 
-  const barsHTML = idxList.map(idx => {
-    const ref = perRef[idx.id] || {cheap:12,fair:18,exp:24};
-    const pct = Math.min(100, (idx.per / maxPer) * 100);
-    const color = idx.per < ref.fair ? 'var(--green)' : idx.per < ref.exp ? 'var(--gold)' : 'var(--red)';
-    const tag = idx.per < ref.cheap ? 'BARATO' : idx.per < ref.fair ? 'JUSTO' : idx.per < ref.exp ? 'CARO' : 'MUY CARO';
-    return `<div class="per-row">
-      <div class="per-name">${idx.name}</div>
-      <div class="per-track"><div class="per-fill" style="width:${pct.toFixed(1)}%;background:${color}"></div></div>
-      <div class="per-val" style="color:${color}">${idx.per.toFixed(1)}x</div>
-      <div class="per-tag" style="color:${color};background:${color}18">${tag}</div>
-    </div>`;
+    return '<div style="display:grid;grid-template-columns:160px 1fr 60px 70px 80px;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border)">' +
+      '<span style="font-size:12px;font-weight:600;color:var(--text1)">' + idx.name + '</span>' +
+      // Bar showing position in range
+      '<div style="position:relative;height:6px;background:#e8eef2;border-radius:3px">' +
+        // Range bar
+        '<div style="position:absolute;top:0;left:0;height:100%;width:' + pos.toFixed(1) + '%;background:' + color + ';border-radius:3px;transition:width .5s"></div>' +
+        // Avg marker
+        '<div style="position:absolute;top:-3px;left:' + avgPos + '%;width:2px;height:12px;background:#062D3F;border-radius:1px" title="Media histórica: ' + r.avg + 'x"></div>' +
+      '</div>' +
+      '<span style="font-family:var(--mono);font-size:13px;font-weight:700;color:' + color + ';text-align:right">' + per.toFixed(1) + 'x</span>' +
+      '<span style="font-family:var(--mono);font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;background:' + color + '18;color:' + color + ';text-align:center">' + label + '</span>' +
+      '<span style="font-family:var(--mono);font-size:12px;font-weight:700;color:' + epsColor + ';text-align:right">' + (eps != null ? (eps >= 0 ? '+' : '') + eps.toFixed(1) + '%' : '—') + '</span>' +
+    '</div>';
   }).join('');
 
-  // PER History Charts — pick 4 main indices
+  // Calculator HTML
+  const calcHtml =
+    '<div style="background:var(--bg3);border-radius:8px;padding:16px;margin-bottom:16px">' +
+      '<div style="font-family:var(--mono);font-size:9px;letter-spacing:0.1em;color:var(--text3);margin-bottom:12px">CALCULADORA DE RETORNO ESPERADO A 12M</div>' +
+      '<div style="font-size:11px;color:var(--text3);margin-bottom:12px;line-height:1.6">Retorno = Cambio múltiplo + Crecimiento BPA + Dividendo</div>' +
+      // Inputs
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">' +
+        '<div>' +
+          '<label style="font-family:var(--mono);font-size:9px;color:var(--text3);display:block;margin-bottom:4px">PER ACTUAL</label>' +
+          '<input id="calc-per-cur" type="number" step="0.1" value="20" style="width:100%;background:#fff;border:1px solid var(--border2);border-radius:6px;padding:7px 10px;font-family:var(--mono);font-size:13px;color:var(--text1);outline:none" oninput="calcReturn()">' +
+        '</div>' +
+        '<div>' +
+          '<label style="font-family:var(--mono);font-size:9px;color:var(--text3);display:block;margin-bottom:4px">PER OBJETIVO</label>' +
+          '<input id="calc-per-tgt" type="number" step="0.1" value="22" style="width:100%;background:#fff;border:1px solid var(--border2);border-radius:6px;padding:7px 10px;font-family:var(--mono);font-size:13px;color:var(--text1);outline:none" oninput="calcReturn()">' +
+        '</div>' +
+        '<div>' +
+          '<label style="font-family:var(--mono);font-size:9px;color:var(--text3);display:block;margin-bottom:4px">CRECIMIENTO BPA (%)</label>' +
+          '<input id="calc-eps" type="number" step="0.5" value="10" style="width:100%;background:#fff;border:1px solid var(--border2);border-radius:6px;padding:7px 10px;font-family:var(--mono);font-size:13px;color:var(--text1);outline:none" oninput="calcReturn()">' +
+        '</div>' +
+        '<div>' +
+          '<label style="font-family:var(--mono);font-size:9px;color:var(--text3);display:block;margin-bottom:4px">DIVIDENDO (%)</label>' +
+          '<input id="calc-div" type="number" step="0.1" value="2" style="width:100%;background:#fff;border:1px solid var(--border2);border-radius:6px;padding:7px 10px;font-family:var(--mono);font-size:13px;color:var(--text1);outline:none" oninput="calcReturn()">' +
+        '</div>' +
+      '</div>' +
+      // Result
+      '<div id="calc-result" style="background:#fff;border-radius:8px;padding:14px;border:1px solid var(--border)">' +
+        '<div style="font-family:var(--mono);font-size:9px;color:var(--text3);margin-bottom:8px">DESCOMPOSICIÓN DEL RETORNO</div>' +
+        '<div id="calc-breakdown" style="display:flex;flex-direction:column;gap:6px"></div>' +
+        '<div style="border-top:2px solid var(--border);margin-top:10px;padding-top:10px;display:flex;justify-content:space-between;align-items:center">' +
+          '<span style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--text1)">RETORNO TOTAL ESPERADO</span>' +
+          '<span id="calc-total" style="font-family:var(--mono);font-size:22px;font-weight:800;color:var(--blue)">—</span>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
+  // Charts
   const chartIds = ['spx','sx5e','ndx','mxef'].filter(id=>D.bolsa[id]?.perSeries);
 
-  el.innerHTML = `
-    <div class="chart-panel" style="margin-bottom:16px">
-      <div class="cp-title">PER Forward — Comparativa actual</div>
-      <div style="padding:8px 0">${barsHTML}</div>
-    </div>
-    <div class="three-col" id="per-charts">
-      ${chartIds.map(id=>`<div class="chart-panel"><div class="cp-title">${D.bolsa[id].name} — PER histórico</div><div class="chart-wrap" style="height:160px"><canvas id="per-${id}"></canvas></div></div>`).join('')}
-    </div>`;
+  el.innerHTML =
+    '<div style="display:grid;grid-template-columns:1fr 320px;gap:16px;margin-bottom:20px">' +
+      '<div class="chart-panel">' +
+        '<div style="display:grid;grid-template-columns:160px 1fr 60px 70px 80px;gap:12px;padding-bottom:8px;border-bottom:2px solid var(--blue);margin-bottom:4px">' +
+          '<span style="font-family:var(--mono);font-size:9px;color:var(--text3);font-weight:600">ÍNDICE</span>' +
+          '<span style="font-family:var(--mono);font-size:9px;color:var(--text3);font-weight:600">MÚLTIPLO (rango histórico)</span>' +
+          '<span style="font-family:var(--mono);font-size:9px;color:var(--text3);font-weight:600;text-align:right">PER</span>' +
+          '<span style="font-family:var(--mono);font-size:9px;color:var(--text3);font-weight:600"></span>' +
+          '<span style="font-family:var(--mono);font-size:9px;color:var(--text3);font-weight:600;text-align:right">BPA 6M</span>' +
+        '</div>' +
+        rowsHtml +
+        '<div style="font-family:var(--mono);font-size:9px;color:var(--text3);margin-top:8px">▲ = media histórica · BPA 6M = cambio revisión consenso últimos 6 meses</div>' +
+      '</div>' +
+      '<div>' + calcHtml + '</div>' +
+    '</div>' +
+    '<div class="three-col" id="per-charts">' +
+      chartIds.map(id=>'<div class="chart-panel"><div class="cp-title">' + D.bolsa[id].name + ' — PER histórico</div><div class="chart-wrap" style="height:160px"><canvas id="per-' + id + '"></canvas></div></div>').join('') +
+    '</div>';
 
-  // Render PER history charts
+  calcReturn();
+
   setTimeout(() => {
     chartIds.forEach(id => {
       const idx = D.bolsa[id];
       const { dates, values } = filterPeriod(idx.perDates, idx.perSeries, '1Y');
-      makeChart(`per-${id}`, 'line', dates.map(fmtDateLabel), [lineDs(idx.name, values, 'var(--blue2)')], {
-        plugins:{ ...CHART_BASE.plugins, tooltip:{ ...CHART_BASE.plugins.tooltip, callbacks:{ label:ctx=>` ${ctx.parsed.y.toFixed(1)}x` } } },
+      const perDs = { ...lineDs(idx.name, values, '#1a2a3a') };
+      makeChart('per-'+id, 'line', dates.map(fmtDateLabel), [perDs], {
+        plugins:{ ...CHART_BASE.plugins, tooltip:{ ...CHART_BASE.plugins.tooltip, callbacks:{ label:ctx=>' '+ctx.parsed.y.toFixed(1)+'x' } } },
         scales:{ ...CHART_BASE.scales, y:{ ...CHART_BASE.scales.y, ticks:{ ...CHART_BASE.scales.y.ticks, callback:v=>v.toFixed(0)+'x' } } },
       });
     });
   }, 50);
 }
+
+function calcReturn() {
+  const perCur = +document.getElementById('calc-per-cur')?.value || 20;
+  const perTgt = +document.getElementById('calc-per-tgt')?.value || 22;
+  const eps    = +document.getElementById('calc-eps')?.value    || 10;
+  const div    = +document.getElementById('calc-div')?.value    || 2;
+
+  // Retorno por cambio de múltiplo: (P/E_tgt / P/E_cur - 1) × 100
+  const multipleRet = +((perTgt / perCur - 1) * 100).toFixed(1);
+  // Retorno total ≈ múltiplo × (1 + BPA/100) + dividendo
+  const total = +(multipleRet + eps + div).toFixed(1);
+
+  const brkEl = document.getElementById('calc-breakdown');
+  const totEl = document.getElementById('calc-total');
+  if (!brkEl || !totEl) return;
+
+  const row = (label, val, color) =>
+    '<div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px">' +
+    '<span style="color:var(--text2)">' + label + '</span>' +
+    '<span style="color:' + color + ';font-weight:700">' + (val >= 0 ? '+' : '') + val.toFixed(1) + '%</span>' +
+    '</div>';
+
+  const mColor = multipleRet >= 0 ? '#1a7a3c' : '#c0392b';
+  const eColor = eps >= 0 ? '#1a7a3c' : '#c0392b';
+
+  brkEl.innerHTML =
+    row('Cambio de múltiplo (' + perCur + 'x → ' + perTgt + 'x)', multipleRet, mColor) +
+    row('Crecimiento BPA', eps, eColor) +
+    row('Dividendo', div, '#0085CA');
+
+  totEl.textContent = (total >= 0 ? '+' : '') + total + '%';
+  totEl.style.color = total >= 0 ? '#1a7a3c' : '#c0392b';
+}
+
 
 // ============================================================
 // SECTION: RENTA FIJA
