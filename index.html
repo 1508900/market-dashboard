@@ -1149,14 +1149,7 @@ const CHART_BASE = {
       ticks:{color:'#8aa5b5', font:{size:9,family:'IBM Plex Mono'}, maxTicksLimit:8,
         callback: function(val, idx) {
           const lbl = this.getLabelForValue(val);
-          if (!lbl) return '';
-          // Format MM-DD to Mon-YY (e.g. "03-15" from "2026-03-15")
-          try {
-            const full = this.chart.data.labels[val] || lbl;
-            const d = new Date(full.length === 5 ? '2026-' + full : full);
-            if (isNaN(d)) return lbl;
-            return d.toLocaleDateString('es-ES',{month:'short',year:'2-digit'}).replace('. ','\'-').replace('.','');
-          } catch(e) { return lbl; }
+          return lbl || '';
         }
       }
     },
@@ -1170,16 +1163,11 @@ const CHART_BASE = {
 
 // Helper: format date label as "Mar-26"
 function fmtDateLabel(d) {
+  if (!d) return '';
   try {
-    // d can be full ISO "2025-02-08" or sliced "02-08"
-    let dt;
-    if (d && d.length === 5 && d[2] === '-') {
-      // MM-DD format — assume current year range
-      dt = new Date('2025-' + d);
-    } else {
-      dt = new Date(d);
-    }
-    if (isNaN(dt)) return d;
+    // Always expect full ISO "2025-02-08" or "2025-02-08T..."
+    const dt = new Date(String(d).slice(0,10));
+    if (isNaN(dt.getTime())) return d;
     const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
     return months[dt.getMonth()] + '-' + String(dt.getFullYear()).slice(2);
   } catch(e) { return d; }
@@ -1202,10 +1190,10 @@ function makeChart(id, type, labels, datasets, opts) {
 function lineDs(label, data, color, fill) {
   return {
     label, data,
-    borderColor: color,
-    backgroundColor: fill ? color+'12' : 'transparent',
-    borderWidth: 1.5,
-    fill: !!fill,
+    borderColor: color || '#1a2a3a',
+    backgroundColor: 'transparent',
+    borderWidth: 1.2,
+    fill: false,
     tension: 0.2,
     pointRadius: 0,
     pointHoverRadius: 4,
@@ -1297,8 +1285,8 @@ function renderEqDetailChart(id, period) {
   charts['det-chart'] = new Chart(ctx.getContext('2d'), {
     type:'line',
     data:{ labels:dates.map(fmtDateLabel), datasets:[{
-      data:values, borderColor:color, backgroundColor:color+'15',
-      borderWidth:2, fill:true, tension:0.3, pointRadius:0, pointHoverRadius:4
+      data:values, borderColor:color, backgroundColor:'transparent',
+      borderWidth:1.2, fill:false, tension:0.2, pointRadius:0, pointHoverRadius:4
     }]},
     options:{ ...CHART_BASE, plugins:{ ...CHART_BASE.plugins,
       tooltip:{ ...CHART_BASE.plugins.tooltip, callbacks:{ label:ctx=>` ${yFormat(ctx.parsed.y)}` } }
@@ -1339,7 +1327,7 @@ function selectIndex(id) {
   const { dates, values: closes } = filterPeriod(idx.dates, idx.closes, D.eqPeriod);
   const isPos = closes.length && closes[closes.length-1] >= closes[0];
   const color = isPos ? '#22c55e' : '#ef4444';
-  makeChart('det-chart', 'line', dates.map(fmtDateLabel), [lineDs(idx.name, closes, color, true)]);
+  makeChart('det-chart', 'line', dates.map(fmtDateLabel), [lineDs(idx.name, closes, color)]);
 
   // Periods summary
   const periods = ['1W','1M','3M','YTD','1Y','2Y','3Y'];
@@ -2275,7 +2263,7 @@ function renderEscenarios() {
   const cardsEl = document.getElementById('sc-cards');
   cardsEl.innerHTML = SCENARIOS.map(sc => {
     const total = Object.values(scProbs).reduce((a,b)=>a+b, 0);
-    const pct = total > 0 ? Math.round(scProbs[sc.id] / total * 100) : 0;
+    const pct = scProbs[sc.id];
     const ranges = AA_RANGES[sc.id];
     return `<div style="background:var(--bg2);border:1px solid var(--border);border-left:4px solid ${sc.color};border-radius:8px;padding:16px;box-shadow:0 1px 3px rgba(6,45,63,0.06)">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
@@ -2307,23 +2295,11 @@ function renderEscenarios() {
 }
 
 function updateScenario(id, val) {
-  val = +val;
-  // Si se sube a >95, poner los demás a 0 (exclusivo)
-  if (val >= 95) {
-    SCENARIOS.forEach(sc => { scProbs[sc.id] = sc.id === id ? 100 : 0; });
-    // Sync sliders
-    SCENARIOS.forEach(sc => {
-      const slider = document.querySelector('input[oninput*="' + sc.id + '"]');
-      if (slider) slider.value = scProbs[sc.id];
-    });
-  } else {
-    scProbs[id] = val;
-  }
-  // Update % labels
-  const total = Object.values(scProbs).reduce((a,b)=>a+b, 0);
+  scProbs[id] = +val;
+  // Show raw values as % (slider position = displayed %)
   SCENARIOS.forEach(sc => {
     const el = document.getElementById('scv-'+sc.id);
-    if (el) el.textContent = total > 0 ? Math.round(scProbs[sc.id]/total*100)+'%' : '0%';
+    if (el) el.textContent = scProbs[sc.id] + '%';
   });
   updateAAChart();
 }
