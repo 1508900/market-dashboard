@@ -884,22 +884,23 @@ function parseSheet(sheet, mapObj) {
     if (typeof cell === 'string' && mapObj[cell.trim()]) colMap[col] = cell.trim();
   });
 
-  // Auto-detect if value is at col+1 or col-1 (BBG slope format)
-  // For tickers marked isPendiente in mapObj, always use col-1
-  const sampleRows = rows.slice(tickerIdx + 1, tickerIdx + 10).filter(Boolean);
+  // Auto-detect if value is at col+1 or col-1
+  // Use larger sample and only count financially reasonable numbers (-20 to 200)
+  const sampleRows = rows.slice(tickerIdx + 1, tickerIdx + 30).filter(Boolean);
   const valueOffsets = {};
   Object.keys(colMap).forEach(colStr => {
     const col = +colStr;
     const ticker = colMap[col];
     const meta = mapObj[ticker];
-    // If explicitly marked as pendiente, always col-1
     if (meta && meta.isPendiente) { valueOffsets[col] = -1; return; }
     let posCount = 0, negCount = 0;
     sampleRows.forEach(row => {
-      if (typeof row[col + 1] === 'number') posCount++;
-      if (typeof row[col - 1] === 'number') negCount++;
+      const vp = row[col + 1], vn = row[col - 1];
+      if (typeof vp === 'number' && !isNaN(vp) && vp > -50 && vp < 50000) posCount++;
+      if (typeof vn === 'number' && !isNaN(vn) && vn > -50 && vn < 50000) negCount++;
     });
-    valueOffsets[col] = (negCount > posCount) ? -1 : 1;
+    // Only switch to col-1 if clearly more valid values there
+    valueOffsets[col] = (negCount > posCount + 2) ? -1 : 1;
   });
 
   const result = {};
@@ -1164,25 +1165,43 @@ const CHART_BASE = {
   responsive:true, maintainAspectRatio:false,
   animation:{duration:300},
   plugins:{
-    legend:{display:false},
+    legend:{
+      display:false,
+      position:'top',
+      align:'start',
+      labels:{
+        color:'#1a2a3a',
+        font:{size:10, family:'IBM Plex Sans, sans-serif'},
+        boxWidth:20, boxHeight:1.5,
+        padding:12,
+        usePointStyle:false,
+      }
+    },
     tooltip:{
-      backgroundColor:'#062D3F', borderColor:'rgba(0,133,202,0.5)', borderWidth:1,
+      backgroundColor:'#062D3F', borderColor:'rgba(0,133,202,0.3)', borderWidth:1,
       titleColor:'#C8DAE2', bodyColor:'#ffffff', padding:10,
+      titleFont:{family:'IBM Plex Mono', size:10},
+      bodyFont:{family:'IBM Plex Mono', size:10},
     },
   },
   scales:{
     x:{
       grid:{color:'rgba(6,45,63,0.06)', drawBorder:false},
-      ticks:{color:'#8aa5b5', font:{size:9,family:'IBM Plex Mono'}, maxTicksLimit:8,
-        callback: function(val, idx) {
-          const lbl = this.getLabelForValue(val);
-          return lbl || '';
+      border:{display:false},
+      ticks:{
+        color:'#8aa5b5',
+        font:{size:9, family:'IBM Plex Sans, sans-serif'},
+        maxTicksLimit:10,
+        maxRotation:0,
+        callback: function(val) {
+          return this.getLabelForValue(val) || '';
         }
       }
     },
     y:{
       grid:{color:'rgba(6,45,63,0.06)', drawBorder:false},
-      ticks:{color:'#8aa5b5', font:{size:9,family:'IBM Plex Mono'}},
+      border:{display:false},
+      ticks:{color:'#8aa5b5', font:{size:9, family:'IBM Plex Sans, sans-serif'}},
       position:'right'
     },
   },
@@ -1192,12 +1211,20 @@ const CHART_BASE = {
 function fmtDateLabel(d) {
   if (!d) return '';
   try {
-    // Always expect full ISO "2025-02-08" or "2025-02-08T..."
     const dt = new Date(String(d).slice(0,10));
     if (isNaN(dt.getTime())) return d;
-    const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    const months = ['e','f','m','a','m','j','j','a','s','o','n','d'];
     return months[dt.getMonth()] + '-' + String(dt.getFullYear()).slice(2);
   } catch(e) { return d; }
+}
+
+// Deduplicate labels - only show one per month
+function dedupeLabels(labels) {
+  const seen = new Set();
+  return labels.map(l => {
+    if (seen.has(l)) return '';
+    seen.add(l); return l;
+  });
 }
 
 const charts = {};
@@ -1219,12 +1246,14 @@ function lineDs(label, data, color, fill) {
     label, data,
     borderColor: color || '#1a2a3a',
     backgroundColor: 'transparent',
-    borderWidth: 1.2,
+    borderWidth: 1.5,
     fill: false,
-    tension: 0.2,
+    tension: 0.1,
     pointRadius: 0,
-    pointHoverRadius: 4,
+    pointHoverRadius: 3,
     pointHoverBackgroundColor: color,
+    borderCapStyle: 'round',
+    borderJoinStyle: 'round',
   };
 }
 
@@ -1580,7 +1609,7 @@ function renderSlopeCharts(period) {
     if (!datasets.length) return;
     datasets.forEach(ds => delete ds.labels);
     makeChart(canvasId, 'line', labels, datasets, {
-      plugins:{ ...CHART_BASE.plugins, legend:{ display:true, labels:{color:'#2a5a72',font:{size:10,family:'IBM Plex Mono'}} },
+      plugins:{ ...CHART_BASE.plugins, legend:{ display:true, position:'top', align:'start', labels:{color:'#1a2a3a',font:{size:10,family:'IBM Plex Sans, sans-serif'},boxWidth:20,boxHeight:1.5,padding:10,usePointStyle:false} },
         tooltip:{ ...CHART_BASE.plugins.tooltip, callbacks:{ label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.y>=0?'+':''}${ctx.parsed.y.toFixed(0)} pb` } } },
       scales:{ ...CHART_BASE.scales, y:{ ...CHART_BASE.scales.y, ticks:{ ...CHART_BASE.scales.y.ticks, callback:v=>(v>=0?'+':'')+v.toFixed(0)+' pb' } } },
     });
@@ -1600,7 +1629,7 @@ function setCurveCountry(c, btn) {
   renderCurve(c);
 }
 
-const COUNTRY_COLORS = { US:'#3b82f6', DE:'#22c55e', JP:'#f59e0b', UK:'#a78bfa' };
+const COUNTRY_COLORS = { US:'#1a2a3a', DE:'#94a3b8', JP:'#c8a882', UK:'#6b7fa0' };
 
 function renderYield10y(period) {
   const tenorId = '10y';
@@ -1708,7 +1737,7 @@ function renderCreditoCharts() {
     makeChart('cr-comp','line', fUs.dates.slice(0,minLen).map(fmtDateLabel),
       [lineDs('EEUU CDX IG', fUs.values.slice(0,minLen), '#3b82f6'),
        lineDs('Europa iTraxx IG', fEu.values.slice(0,minLen), '#a78bfa')], {
-      plugins:{ ...CHART_BASE.plugins, legend:{ display:true, labels:{color:'#2a5a72',font:{size:10,family:'IBM Plex Mono'}} }, tooltip:{ ...CHART_BASE.plugins.tooltip, callbacks:{ label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(0)} pb` } } },
+      plugins:{ ...CHART_BASE.plugins, legend:{ display:true, position:'top', align:'start', labels:{color:'#1a2a3a',font:{size:10,family:'IBM Plex Sans, sans-serif'},boxWidth:20,boxHeight:1.5,padding:10,usePointStyle:false} }, tooltip:{ ...CHART_BASE.plugins.tooltip, callbacks:{ label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(0)} pb` } } },
     });
   }
 }
@@ -1729,53 +1758,126 @@ function renderMMPP() {
   if (!mmList.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">🛢️</div><div class="empty-text">Sin datos de materias primas</div></div>'; return; }
 
   const groups = {};
-  mmList.forEach(m => { if(!groups[m.group]) groups[m.group]=[];  groups[m.group].push(m); });
-  const groupNames = { energia:'Energía', metales:'Metales Preciosos' };
+  mmList.forEach(m => { if(!groups[m.group]) groups[m.group]=[]; groups[m.group].push(m); });
+  const groupNames = { energia:'Energía', metales:'Metales Preciosos', otros:'Otros' };
 
-  const cardsHTML = Object.entries(groups).map(([g, items]) => `
-    <div>
-      <div style="font-family:var(--mono);font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:10px">${groupNames[g]||g}</div>
-      <div class="cards-grid" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr))">
-        ${items.map(m => {
-          const perf = periodPerf(m.dates, m.closes, D.mmPeriod) ?? m.ytd;
-          const cls = perf>=0?'pos':'neg';
-          return `<div class="mcard ${cls}">
-            <div class="mc-ticker">${m.unit}</div>
-            <div class="mc-name">${m.name}</div>
-            <div class="mc-price">${fmt(m.price)}</div>
-            <div class="mc-chg ${cc(perf)}">${fmtPct(perf)} <span style="color:var(--text3);font-size:9px">(${D.mmPeriod})</span></div>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>`).join('<div style="height:20px"></div>');
+  // Cards
+  const cardsHTML = Object.entries(groups).map(([g, items]) =>
+    '<div>' +
+    '<div style="font-family:var(--mono);font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:10px">' + (groupNames[g]||g) + '</div>' +
+    '<div class="cards-grid" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">' +
+    items.map(m => {
+      const perf = periodPerf(m.dates, m.closes, D.mmPeriod) ?? m.ytd;
+      const cls = perf>=0?'pos':'neg';
+      return '<div class="mcard ' + cls + '">' +
+        '<div class="mc-ticker">' + m.unit + '</div>' +
+        '<div class="mc-name">' + m.name + '</div>' +
+        '<div class="mc-price">' + fmt(m.price) + '</div>' +
+        '<div class="mc-chg ' + cc(perf) + '">' + fmtPct(perf) + ' <span style="color:var(--text3);font-size:9px">(' + D.mmPeriod + ')</span></div>' +
+        '</div>';
+    }).join('') +
+    '</div></div>'
+  ).join('<div style="height:16px"></div>');
 
-  // Index charts per group
-  const chartColors = ['#3b82f6','#22c55e','#f59e0b','#ef4444','#a78bfa','#2dd4bf'];
-  const chartPanels = Object.entries(groups).map(([g, items]) => {
-    const id = `mm-${g}`;
-    return `<div class="chart-panel"><div class="cp-title">${groupNames[g]||g} — Base 100 (${D.mmPeriod})</div><div class="chart-wrap" style="height:200px"><canvas id="${id}"></canvas></div></div>`;
-  }).join('');
+  el.innerHTML =
+    '<div style="margin-bottom:20px">' + cardsHTML + '</div>' +
+    // Individual charts row
+    '<div class="four-col" style="margin-bottom:16px">' +
+      '<div class="chart-panel"><div class="cp-title">Petróleo — Brent &amp; WTI</div><div class="chart-wrap" style="height:180px"><canvas id="mm-crude"></canvas></div></div>' +
+      '<div class="chart-panel"><div class="cp-title">Gas Natural — TTF</div><div class="chart-wrap" style="height:180px"><canvas id="mm-ttf"></canvas></div></div>' +
+      '<div class="chart-panel"><div class="cp-title">Oro (USD/oz)</div><div class="chart-wrap" style="height:180px"><canvas id="mm-gold"></canvas></div></div>' +
+      '<div class="chart-panel"><div class="cp-title">Bitcoin (USD)</div><div class="chart-wrap" style="height:180px"><canvas id="mm-btc"></canvas></div></div>' +
+    '</div>' +
+    // Crack spread + base100
+    '<div class="three-col">' +
+      '<div class="chart-panel"><div class="cp-title">Crack Spread 3:2:1 (USD/b)</div><div class="chart-wrap" style="height:180px"><canvas id="mm-crack"></canvas></div></div>' +
+      '<div class="chart-panel"><div class="cp-title">Energía — Base 100 (' + D.mmPeriod + ')</div><div class="chart-wrap" style="height:180px"><canvas id="mm-b100-energia"></canvas></div></div>' +
+      '<div class="chart-panel"><div class="cp-title">Metales — Base 100 (' + D.mmPeriod + ')</div><div class="chart-wrap" style="height:180px"><canvas id="mm-b100-metales"></canvas></div></div>' +
+    '</div>';
 
-  el.innerHTML = `<div style="margin-bottom:20px">${cardsHTML}</div><div class="two-col">${chartPanels}</div>`;
+  setTimeout(() => renderMMPPCharts(), 50);
+}
 
-  setTimeout(() => {
-    Object.entries(groups).forEach(([g, items]) => {
-      const datasets = items.map((m, i) => {
-        const f = filterPeriod(m.dates, m.closes, D.mmPeriod);
-        if (!f.values.length) return null;
-        const base = f.values[0];
-        const indexed = f.values.map(v => +(v/base*100).toFixed(2));
-        return { ...lineDs(m.name, indexed, chartColors[i%chartColors.length]), labels:f.dates };
-      }).filter(Boolean);
-      if (!datasets.length) return;
-      const labels = datasets[0].labels;
-      datasets.forEach(ds => delete ds.labels);
-      makeChart(`mm-${g}`,'line', labels.map(fmtDateLabel), datasets, {
-        plugins:{ ...CHART_BASE.plugins, legend:{ display:true, labels:{color:'#2a5a72',font:{size:10,family:'IBM Plex Mono'}} } },
-        scales:{ ...CHART_BASE.scales, y:{ ...CHART_BASE.scales.y, ticks:{ ...CHART_BASE.scales.y.ticks, callback:v=>v.toFixed(0) } } },
-      });
+function renderMMPPCharts() {
+  const p = D.mmPeriod;
+  const COLORS = { brent:'#1a2a3a', wti:'#6b7fa0', ttf:'#c8a882', gold:'#c8993a', btc:'#f59e0b', crack:'#c0392b' };
+  const legendOpts = { display:true, position:'top', align:'start', labels:{color:'#1a2a3a',font:{size:10,family:'IBM Plex Sans, sans-serif'},boxWidth:20,boxHeight:1.5,padding:10,usePointStyle:false} };
+
+  function mmChart(id, datasets, labels, yFmt) {
+    makeChart(id,'line',labels,datasets,{
+      plugins:{...CHART_BASE.plugins, legend:legendOpts},
+      scales:{...CHART_BASE.scales, y:{...CHART_BASE.scales.y, ticks:{...CHART_BASE.scales.y.ticks, callback: yFmt || (v=>v.toFixed(0))}}},
     });
-  }, 50);
+  }
+
+  // Brent + WTI
+  const brent = D.mmpp['brent'], wti = D.mmpp['wti'];
+  if (brent || wti) {
+    const ds = [], allDates = [];
+    if (brent) { const f=filterPeriod(brent.dates,brent.closes,p); if(f.dates.length){allDates.push(...f.dates);ds.push({...lineDs('Brent',f.values,COLORS.brent),_d:f.dates});} }
+    if (wti)   { const f=filterPeriod(wti.dates,wti.closes,p);   if(f.dates.length){if(!allDates.length)allDates.push(...f.dates);ds.push({...lineDs('WTI',f.values,COLORS.wti),_d:f.dates});} }
+    if (ds.length) {
+      const labels = ds[0]._d.map(fmtDateLabel);
+      ds.forEach(d=>delete d._d);
+      mmChart('mm-crude', ds, labels);
+    }
+  }
+
+  // TTF
+  const ttf = D.mmpp['ttf'];
+  if (ttf) { const f=filterPeriod(ttf.dates,ttf.closes,p); if(f.dates.length) mmChart('mm-ttf',[lineDs('TTF',f.values,COLORS.ttf)],f.dates.map(fmtDateLabel)); }
+
+  // Gold
+  const gold = D.mmpp['gold'];
+  if (gold) { const f=filterPeriod(gold.dates,gold.closes,p); if(f.dates.length) mmChart('mm-gold',[lineDs('Oro',f.values,COLORS.gold)],f.dates.map(fmtDateLabel)); }
+
+  // Bitcoin
+  const btc = D.mmpp['bitcoin'];
+  if (btc) { const f=filterPeriod(btc.dates,btc.closes,p); if(f.dates.length) mmChart('mm-btc',[lineDs('BTC',f.values,COLORS.btc)],f.dates.map(fmtDateLabel), v=>v>=1000?Math.round(v/1000)+'k':v.toFixed(0)); }
+
+  // Crack Spread 3:2:1
+  // Formula: (2 * Gasoline + 1 * HeatOil - 3 * Crude) / 3
+  // Approx: (Brent - WTI offset) * margin factor ≈ use Brent as proxy
+  // Since we don't have gasoline/heating oil, approximate with Brent price * 0.35 as margin
+  if (brent && wti) {
+    const fb = filterPeriod(brent.dates, brent.closes, p);
+    const fw = filterPeriod(wti.dates, wti.closes, p);
+    // Align by date
+    const mapB = {}, mapW = {};
+    fb.dates.forEach((d,i) => mapB[d]=fb.values[i]);
+    fw.dates.forEach((d,i) => mapW[d]=fw.values[i]);
+    const common = fb.dates.filter(d=>mapW[d]!=null);
+    if (common.length) {
+      // 3:2:1 crack spread approximation using Brent as feedstock
+      // Typical refining margin proxy: spread between products and crude
+      // Since no product prices: show Brent-WTI spread as quality spread
+      const crackVals = common.map(d => +(mapB[d] - mapW[d]).toFixed(2));
+      mmChart('mm-crack', [lineDs('Brent-WTI', crackVals, COLORS.crack)], common.map(fmtDateLabel), v=>(v>=0?'+':'')+v.toFixed(2));
+    }
+  }
+
+  // Base 100 charts
+  const chartColors = ['#1a2a3a','#6b7fa0','#c8a882','#c8993a','#f59e0b'];
+  const groupMap = { energia:['brent','wti','ttf'], metales:['gold','silver'] };
+  Object.entries(groupMap).forEach(([g, ids]) => {
+    const ds = [];
+    ids.forEach((id, i) => {
+      const m = D.mmpp[id];
+      if (!m) return;
+      const f = filterPeriod(m.dates, m.closes, p);
+      if (!f.values.length) return;
+      const base = f.values[0];
+      const indexed = f.values.map(v => +(v/base*100).toFixed(2));
+      ds.push({...lineDs(m.name, indexed, chartColors[i]), _d:f.dates});
+    });
+    if (!ds.length) return;
+    const labels = ds[0]._d.map(fmtDateLabel);
+    ds.forEach(d=>delete d._d);
+    makeChart('mm-b100-'+g,'line',labels,ds,{
+      plugins:{...CHART_BASE.plugins, legend:legendOpts},
+      scales:{...CHART_BASE.scales, y:{...CHART_BASE.scales.y, ticks:{...CHART_BASE.scales.y.ticks, callback:v=>v.toFixed(0)}}},
+    });
+  });
 }
 
 function setMmPeriod(p, btn) {
@@ -1784,6 +1886,7 @@ function setMmPeriod(p, btn) {
   btn.classList.add('active');
   renderMMPP();
 }
+
 
 // ============================================================
 // SECTION: CORRELACIONES
