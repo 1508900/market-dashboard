@@ -1,4 +1,4 @@
-  <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -729,6 +729,7 @@ const D = {
   mmPeriod: '1W',
   corrPeriod: '3M',
   selIndex: null,
+  eqChartType: 'price',  // 'price' | 'ey' | 'fcfy'
 };
 
 // ============================================================
@@ -781,6 +782,7 @@ const MMPP_MAP = {
 };
 
 const TIPOS_MAP = {
+  // Tipos por plazo
   'USGG2YR Index':  { id:'us2y',  country:'US', tenor:'2Y',  name:'US 2Y'  },
   'USGG5YR Index':  { id:'us5y',  country:'US', tenor:'5Y',  name:'US 5Y'  },
   'USGG10YR Index': { id:'us10y', country:'US', tenor:'10Y', name:'US 10Y' },
@@ -795,6 +797,26 @@ const TIPOS_MAP = {
   'GUKG2 Index':    { id:'uk2y',  country:'UK', tenor:'2Y',  name:'UK 2Y'  },
   'GUKG10 Index':   { id:'uk10y', country:'UK', tenor:'10Y', name:'UK 10Y' },
   'GUKG30 Index':   { id:'uk30y', country:'UK', tenor:'30Y', name:'UK 30Y' },
+  // Pendientes 2-10 (valor en col-1)
+  'USYC2Y10 Index': { id:'us_2_10',  country:'US', isPendiente:true, name:'US 2-10Y'  },
+  'DEYC2Y10 Index': { id:'de_2_10',  country:'DE', isPendiente:true, name:'DE 2-10Y'  },
+  'UKYC2Y10 Index': { id:'uk_2_10',  country:'UK', isPendiente:true, name:'UK 2-10Y'  },
+  'JPYC2Y10 Index': { id:'jp_2_10',  country:'JP', isPendiente:true, name:'JP 2-10Y'  },
+  // Pendientes 2-30 (valor en col-1)
+  'USYC2Y30 Index': { id:'us_2_30',  country:'US', isPendiente:true, name:'US 2-30Y'  },
+  'DEYC2Y30 Index': { id:'de_2_30',  country:'DE', isPendiente:true, name:'DE 2-30Y'  },
+  'UKYC2Y30 Index': { id:'uk_2_30',  country:'UK', isPendiente:true, name:'UK 2-30Y'  },
+  'JPYC2Y30 Index': { id:'jp_2_30',  country:'JP', isPendiente:true, name:'JP 2-30Y'  },
+  // Pendientes 10-30 (valor en col-1)
+  'USYC1030 Index': { id:'us_10_30', country:'US', isPendiente:true, name:'US 10-30Y' },
+  'DEYC1030 Index': { id:'de_10_30', country:'DE', isPendiente:true, name:'DE 10-30Y' },
+  'UKYC1030 Index': { id:'uk_10_30', country:'UK', isPendiente:true, name:'UK 10-30Y' },
+  'JPYC1030 Index': { id:'jp_10_30', country:'JP', isPendiente:true, name:'JP 10-30Y' },
+  // Tipos de referencia
+  'EUR003M Index':  { id:'euribor3m',  isTipoRef:true, name:'Euribor 3M'  },
+  'EUR012M Index':  { id:'euribor12m', isTipoRef:true, name:'Euribor 12M' },
+  'EUORDEPO Index': { id:'bce_depo',   isTipoRef:true, name:'Depo BCE'    },
+  'FDTR     Index': { id:'fed_funds',  isTipoRef:true, name:'Fed Funds'   },
 };
 
 const SPREAD_MAP = {
@@ -1245,7 +1267,7 @@ function renderBolsa() {
 }
 
 function setEqChartType(type, btn) {
-  eqChartType = type;
+  D.eqChartType = type;
   document.querySelectorAll('#eq-chart-type-row .pbtn').forEach(b=>b.classList.remove('active'));
   if (btn) btn.classList.add('active');
   if (D.selIndex) renderEqDetailChart(D.selIndex, D.eqPeriod);
@@ -1257,17 +1279,17 @@ function renderEqDetailChart(id, period) {
 
   let dates, values, label, color, yFormat;
 
-  if (eqChartType === 'ey' && D.ey[id]) {
+  if (D.eqChartType === 'ey' && D.ey[id]) {
     const f = filterPeriod(D.ey[id].dates, D.ey[id].values, period);
     dates = f.dates; values = f.values; label = 'Earning Yield %';
     color = '#22c55e'; yFormat = v => v.toFixed(2)+'%';
-  } else if (eqChartType === 'fcfy' && D.fcfy[id]) {
+  } else if (D.eqChartType === 'fcfy' && D.fcfy[id]) {
     const f = filterPeriod(D.fcfy[id].dates, D.fcfy[id].values, period);
     dates = f.dates; values = f.values; label = 'FCF Yield %';
     color = '#a78bfa'; yFormat = v => v.toFixed(2)+'%';
   } else {
     // Fallback to price (also used when EY/FCFY not available for this index)
-    if ((eqChartType === 'ey' && !D.ey[id]) || (eqChartType === 'fcfy' && !D.fcfy[id])) {
+    if ((D.eqChartType === 'ey' && !D.ey[id]) || (D.eqChartType === 'fcfy' && !D.fcfy[id])) {
       console.log(`No ${eqChartType} data for ${id}`);
     }
     const f = filterPeriod(idx.dates, idx.closes, period);
@@ -1770,7 +1792,7 @@ const CORR_PAIRS = [
 ];
 
 let selCorrPair = null;
-let eqChartType = 'price'; // 'price' | 'ey' | 'fcfy'
+
 
 function getSeries(id) {
   if (D.bolsa[id]) return { dates: D.bolsa[id].dates, values: D.bolsa[id].closes };
