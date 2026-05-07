@@ -884,23 +884,14 @@ function parseSheet(sheet, mapObj) {
     if (typeof cell === 'string' && mapObj[cell.trim()]) colMap[col] = cell.trim();
   });
 
-  // Auto-detect if value is at col+1 or col-1
-  // Use larger sample and only count financially reasonable numbers (-20 to 200)
-  const sampleRows = rows.slice(tickerIdx + 1, tickerIdx + 30).filter(Boolean);
+  // Determine value offset: use explicit offset from mapObj, else always col+1
   const valueOffsets = {};
   Object.keys(colMap).forEach(colStr => {
     const col = +colStr;
     const ticker = colMap[col];
     const meta = mapObj[ticker];
-    if (meta && meta.isPendiente) { valueOffsets[col] = -1; return; }
-    let posCount = 0, negCount = 0;
-    sampleRows.forEach(row => {
-      const vp = row[col + 1], vn = row[col - 1];
-      if (typeof vp === 'number' && !isNaN(vp) && vp > -50 && vp < 50000) posCount++;
-      if (typeof vn === 'number' && !isNaN(vn) && vn > -50 && vn < 50000) negCount++;
-    });
-    // Only switch to col-1 if clearly more valid values there
-    valueOffsets[col] = (negCount > posCount + 2) ? -1 : 1;
+    // Use explicit offset if defined in map, otherwise always col+1
+    valueOffsets[col] = (meta && meta.offset) ? meta.offset : 1;
   });
 
   const result = {};
@@ -1687,58 +1678,81 @@ function renderCredito() {
   if (!Object.keys(D.spreads).length) { el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div><div class="empty-text">Sin datos de spreads</div></div>'; return; }
 
   const spreadList = Object.values(D.spreads);
-  const cardsHTML = spreadList.map(s => {
-    const prev = s.values.length>=2 ? s.values[s.values.length-2] : s.last;
-    const chg = prev ? +(s.last - prev).toFixed(1) : 0;
-    const cls = chg > 0 ? 'neg' : 'pos';
-    return `<div class="scard">
-      <div class="sc-region">${s.region}</div>
-      <div class="sc-name">${s.name}</div>
-      <div class="sc-spread">${s.last.toFixed(0)} <small>pb</small></div>
-      <div class="sc-chg" style="color:${chg>0?'var(--red)':chg<0?'var(--green)':'var(--text3)'}">${chg>0?'+':''}${chg} pb</div>
-    </div>`;
+  var cardsHTML = spreadList.map(function(s) {
+    var prev = s.values.length>=2 ? s.values[s.values.length-2] : s.last;
+    var chg = prev ? +(s.last - prev).toFixed(1) : 0;
+    return '<div class="scard"><div class="sc-region">'+s.region+'</div><div class="sc-name">'+s.name+'</div><div class="sc-spread">'+s.last.toFixed(0)+' <small>pb</small></div><div class="sc-chg" style="color:'+(chg>0?'var(--red)':chg<0?'var(--green)':'var(--text3)')+'">'+  (chg>0?'+':'')+chg+' pb</div></div>';
   }).join('');
 
-  const mainSpreads = ['cdx_ig','cdx_hy','itrx_ig','itrx_xover'];
-  const chartPanels = mainSpreads.filter(id=>D.spreads[id]).map(id=>
-    `<div class="chart-panel"><div class="cp-title">${D.spreads[id].name}</div><div class="chart-wrap" style="height:160px"><canvas id="cr-${id}"></canvas></div></div>`
-  ).join('');
+  var cdxIg = D.spreads['cdx_ig'], cdxHy = D.spreads['cdx_hy'];
+  var itrxIg = D.spreads['itrx_ig'], itrxXover = D.spreads['itrx_xover'];
+  var usRatio = cdxIg && cdxHy ? (cdxHy.last/cdxIg.last).toFixed(2) : null;
+  var euRatio = itrxIg && itrxXover ? (itrxXover.last/itrxIg.last).toFixed(2) : null;
 
-  // Comparativo EEUU vs Europa IG
-  const hasComp = D.spreads['cdx_ig'] && D.spreads['itrx_ig'];
+  var ratioCards = '';
+  if (usRatio || euRatio) {
+    ratioCards = '<div style="display:flex;gap:12px;margin-bottom:16px">';
+    if (usRatio) ratioCards += '<div class="scard" style="flex:1"><div class="sc-region">EEUU</div><div class="sc-name">Ratio HY/IG (CDX)</div><div class="sc-spread">'+usRatio+'x</div><div class="sc-chg" style="color:var(--text3)">HY '+cdxHy.last.toFixed(0)+'pb / IG '+cdxIg.last.toFixed(0)+'pb</div></div>';
+    if (euRatio) ratioCards += '<div class="scard" style="flex:1"><div class="sc-region">Europa</div><div class="sc-name">Ratio Xover/IG (iTraxx)</div><div class="sc-spread">'+euRatio+'x</div><div class="sc-chg" style="color:var(--text3)">Xover '+itrxXover.last.toFixed(0)+'pb / IG '+itrxIg.last.toFixed(0)+'pb</div></div>';
+    ratioCards += '</div>';
+  }
 
-  el.innerHTML = `
-    <div class="spread-cards">${cardsHTML}</div>
-    <div class="three-col">${chartPanels}</div>
-    ${hasComp ? `<div class="chart-panel" style="margin-top:16px"><div class="cp-title">EEUU vs Europa — IG Comparativo (pb)</div><div class="chart-wrap" style="height:160px"><canvas id="cr-comp"></canvas></div></div>` : ''}`;
+  var mainSpreads = ['cdx_ig','cdx_hy','itrx_ig','itrx_xover'];
+  var chartPanels = mainSpreads.filter(function(id){return D.spreads[id];}).map(function(id){
+    return '<div class="chart-panel"><div class="cp-title">'+D.spreads[id].name+'</div><div class="chart-wrap" style="height:160px"><canvas id="cr-'+id+'"></canvas></div></div>';
+  }).join('');
 
-  setTimeout(() => renderCreditoCharts(), 50);
+  var hasComp = cdxIg && itrxIg;
+  var hasRatioChart = cdxIg && cdxHy && itrxIg && itrxXover;
+
+  el.innerHTML = '<div class="spread-cards">'+cardsHTML+'</div>'+ratioCards+'<div class="three-col">'+chartPanels+'</div>'+
+    (hasComp ? '<div class="two-col" style="margin-top:16px"><div class="chart-panel"><div class="cp-title">EEUU vs Europa — IG (pb)</div><div class="chart-wrap" style="height:160px"><canvas id="cr-comp"></canvas></div></div>'+(hasRatioChart?'<div class="chart-panel"><div class="cp-title">Ratio HY/IG — EEUU y Europa</div><div class="chart-wrap" style="height:160px"><canvas id="cr-ratio"></canvas></div></div>':'')+'</div>' : '');
+
+  setTimeout(function(){ renderCreditoCharts(); }, 50);
 }
 
 function renderCreditoCharts() {
-  const mainSpreads = ['cdx_ig','cdx_hy','itrx_ig','itrx_xover'];
-  const colors = { cdx_ig:'#3b82f6', cdx_hy:'#f97316', itrx_ig:'#a78bfa', itrx_xover:'#f59e0b' };
+  var mainSpreads = ['cdx_ig','cdx_hy','itrx_ig','itrx_xover'];
+  var colors = { cdx_ig:'#1a2a3a', cdx_hy:'#c0392b', itrx_ig:'#6b7fa0', itrx_xover:'#c8a882' };
+  var legendOpts = { display:true, position:'top', align:'start', labels:{color:'#1a2a3a',font:{size:10,family:'IBM Plex Sans, sans-serif'},boxWidth:20,boxHeight:1.5,padding:10,usePointStyle:false} };
 
-  mainSpreads.filter(id=>D.spreads[id]).forEach(id => {
-    const s = D.spreads[id];
-    const f = filterPeriod(s.dates, s.values, D.crPeriod);
-    makeChart(`cr-${id}`, 'line', f.dates.map(fmtDateLabel),
-      [{ ...lineDs(s.name, f.values, colors[id], true) }], {
-      plugins:{ ...CHART_BASE.plugins, tooltip:{ ...CHART_BASE.plugins.tooltip, callbacks:{ label:ctx=>` ${ctx.parsed.y.toFixed(0)} pb` } } },
+  mainSpreads.filter(function(id){return D.spreads[id];}).forEach(function(id) {
+    var s = D.spreads[id];
+    var f = filterPeriod(s.dates, s.values, D.crPeriod);
+    makeChart('cr-'+id, 'line', f.dates.map(fmtDateLabel), [lineDs(s.name, f.values, colors[id])], {
+      plugins:{ ...CHART_BASE.plugins, tooltip:{ ...CHART_BASE.plugins.tooltip, callbacks:{ label:function(ctx){ return ' '+ctx.parsed.y.toFixed(0)+' pb'; } } } },
     });
   });
 
-  // Comp
-  const cdxIg = D.spreads['cdx_ig'], itrxIg = D.spreads['itrx_ig'];
+  var cdxIg=D.spreads['cdx_ig'], cdxHy=D.spreads['cdx_hy'], itrxIg=D.spreads['itrx_ig'], itrxXover=D.spreads['itrx_xover'];
+
   if (cdxIg && itrxIg && document.getElementById('cr-comp')) {
-    const fUs = filterPeriod(cdxIg.dates, cdxIg.values, D.crPeriod);
-    const fEu = filterPeriod(itrxIg.dates, itrxIg.values, D.crPeriod);
-    const minLen = Math.min(fUs.dates.length, fEu.dates.length);
-    makeChart('cr-comp','line', fUs.dates.slice(0,minLen).map(fmtDateLabel),
-      [lineDs('EEUU CDX IG', fUs.values.slice(0,minLen), '#3b82f6'),
-       lineDs('Europa iTraxx IG', fEu.values.slice(0,minLen), '#a78bfa')], {
-      plugins:{ ...CHART_BASE.plugins, legend:{ display:true, position:'top', align:'start', labels:{color:'#1a2a3a',font:{size:10,family:'IBM Plex Sans, sans-serif'},boxWidth:20,boxHeight:1.5,padding:10,usePointStyle:false} }, tooltip:{ ...CHART_BASE.plugins.tooltip, callbacks:{ label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(0)} pb` } } },
-    });
+    var fUs=filterPeriod(cdxIg.dates,cdxIg.values,D.crPeriod);
+    var fEu=filterPeriod(itrxIg.dates,itrxIg.values,D.crPeriod);
+    var minLen=Math.min(fUs.dates.length,fEu.dates.length);
+    makeChart('cr-comp','line',fUs.dates.slice(0,minLen).map(fmtDateLabel),
+      [lineDs('EEUU CDX IG',fUs.values.slice(0,minLen),'#1a2a3a'),lineDs('Europa iTraxx IG',fEu.values.slice(0,minLen),'#6b7fa0')],
+      {plugins:{...CHART_BASE.plugins,legend:legendOpts,tooltip:{...CHART_BASE.plugins.tooltip,callbacks:{label:function(ctx){return ' '+ctx.dataset.label+': '+ctx.parsed.y.toFixed(0)+' pb';}}}}});
+  }
+
+  if (cdxIg && cdxHy && itrxIg && itrxXover && document.getElementById('cr-ratio')) {
+    var fUI=filterPeriod(cdxIg.dates,cdxIg.values,D.crPeriod);
+    var fUH=filterPeriod(cdxHy.dates,cdxHy.values,D.crPeriod);
+    var fEI=filterPeriod(itrxIg.dates,itrxIg.values,D.crPeriod);
+    var fEX=filterPeriod(itrxXover.dates,itrxXover.values,D.crPeriod);
+    var mUI={},mUH={},mEI={},mEX={};
+    fUI.dates.forEach(function(d,i){mUI[d]=fUI.values[i];});
+    fUH.dates.forEach(function(d,i){mUH[d]=fUH.values[i];});
+    fEI.dates.forEach(function(d,i){mEI[d]=fEI.values[i];});
+    fEX.dates.forEach(function(d,i){mEX[d]=fEX.values[i];});
+    var cUs=fUI.dates.filter(function(d){return mUH[d];}), cEu=fEI.dates.filter(function(d){return mEX[d];});
+    var rUs=cUs.map(function(d){return +(mUH[d]/mUI[d]).toFixed(2);});
+    var rEu=cEu.map(function(d){return +(mEX[d]/mEI[d]).toFixed(2);});
+    var allD=cUs.length>=cEu.length?cUs:cEu;
+    makeChart('cr-ratio','line',allD.map(fmtDateLabel),
+      [lineDs('HY/IG EEUU',rUs,'#c0392b'),lineDs('Xover/IG Europa',rEu,'#c8a882')],
+      {plugins:{...CHART_BASE.plugins,legend:legendOpts,tooltip:{...CHART_BASE.plugins.tooltip,callbacks:{label:function(ctx){return ' '+ctx.dataset.label+': '+ctx.parsed.y.toFixed(2)+'x';}}}},
+       scales:{...CHART_BASE.scales,y:{...CHART_BASE.scales.y,ticks:{...CHART_BASE.scales.y.ticks,callback:function(v){return v.toFixed(1)+'x';}}}}});
   }
 }
 
@@ -1892,14 +1906,14 @@ function setMmPeriod(p, btn) {
 // SECTION: CORRELACIONES
 // ============================================================
 const CORR_PAIRS = [
-  { a:'spx',  b:'brent',  la:'S&P 500',   lb:'Brent'  },
-  { a:'sx5e', b:'brent',  la:'EuroStoxx', lb:'Brent'  },
-  { a:'spx',  b:'gold',   la:'S&P 500',   lb:'Oro'    },
-  { a:'brent',b:'gold',   la:'Brent',     lb:'Oro'    },
-  { a:'spx',  b:'eurusd', la:'S&P 500',   lb:'EUR/USD'},
-  { a:'dxy',  b:'gold',   la:'DXY',       lb:'Oro'    },
-  { a:'spx',  b:'dxy',    la:'S&P 500',   lb:'DXY'    },
-  { a:'brent',b:'eurusd', la:'Brent',     lb:'EUR/USD'},
+  { a:'spx',   b:'gold',   la:'S&P 500',    lb:'Oro',     desc:'Bolsa vs activo refugio' },
+  { a:'spx',   b:'dxy',    la:'S&P 500',    lb:'DXY',     desc:'Bolsa vs dólar' },
+  { a:'brent', b:'gold',   la:'Brent',      lb:'Oro',     desc:'Petróleo vs Oro' },
+  { a:'brent', b:'dxy',    la:'Brent',      lb:'DXY',     desc:'Petróleo vs dólar' },
+  { a:'gold',  b:'dxy',    la:'Oro',        lb:'DXY',     desc:'Oro vs dólar (inversa típica)' },
+  { a:'spx',   b:'eurusd', la:'S&P 500',    lb:'EUR/USD', desc:'Bolsa EEUU vs divisas' },
+  { a:'mxef',  b:'dxy',    la:'MSCI EM',    lb:'DXY',     desc:'EM vs dólar (inversa típica)' },
+  { a:'sx5e',  b:'eurusd', la:'EuroStoxx',  lb:'EUR/USD', desc:'Bolsa europea vs euro' },
 ];
 
 let selCorrPair = null;
@@ -1908,6 +1922,7 @@ let selCorrPair = null;
 function getSeries(id) {
   if (D.bolsa[id]) return { dates: D.bolsa[id].dates, values: D.bolsa[id].closes };
   if (D.mmpp[id])  return { dates: D.mmpp[id].dates,  values: D.mmpp[id].closes  };
+  // Also check FX in bolsa
   return null;
 }
 
@@ -2428,8 +2443,18 @@ function renderEscenarios() {
 }
 
 function updateScenario(id, val) {
-  scProbs[id] = +val;
-  // Show raw values as % (slider position = displayed %)
+  val = +val;
+  // If moved to 100, set all others to 0
+  if (val >= 100) {
+    SCENARIOS.forEach(sc => { scProbs[sc.id] = sc.id === id ? 100 : 0; });
+    // Sync all sliders
+    document.querySelectorAll('input[type=range]').forEach(sl => {
+      const slId = sl.getAttribute('oninput')?.match(/'([^']+)'/)?.[1];
+      if (slId) sl.value = scProbs[slId] || 0;
+    });
+  } else {
+    scProbs[id] = val;
+  }
   SCENARIOS.forEach(sc => {
     const el = document.getElementById('scv-'+sc.id);
     if (el) el.textContent = scProbs[sc.id] + '%';
