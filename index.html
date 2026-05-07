@@ -1552,12 +1552,25 @@ function renderRentaFija() {
         </div>
         <div class="chart-wrap" style="height:180px"><canvas id="curve-chart"></canvas></div>
       </div>
+    </div>
+    <div class="chart-panel" style="margin-top:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div class="cp-title" style="margin:0">Periféricos Europa — Bono 10Y</div>
+        <div style="display:flex;gap:6px">
+          <button class="pbtn active" onclick="setRfPeriod('3M',this)">3M</button>
+          <button class="pbtn" onclick="setRfPeriod('6M',this)">6M</button>
+          <button class="pbtn" onclick="setRfPeriod('1Y',this)">1A</button>
+          <button class="pbtn" onclick="setRfPeriod('3Y',this)">3A</button>
+        </div>
+      </div>
+      <div class="chart-wrap" style="height:200px"><canvas id="periferico-chart"></canvas></div>
     </div>`;
 
   setTimeout(() => {
     renderSlopeCharts('3M');
     renderYield10y('3M');
     renderCurve('US');
+    renderPerifericos('3M');
   }, 50);
 }
 
@@ -1608,11 +1621,47 @@ function renderSlopeCharts(period) {
   });
 }
 
+function renderPerifericos(period) {
+  const canvas = document.getElementById('periferico-chart');
+  if (!canvas) return;
+  const specs = [
+    { id:'es10y', name:'🇪🇸 España',  color:'#c0392b' },
+    { id:'it10y', name:'🇮🇹 Italia',  color:'#27ae60' },
+    { id:'fr10y', name:'🇫🇷 Francia', color:'#2e86ab' },
+    { id:'de10y', name:'🇩🇪 Alemania',color:'#94a3b8' },
+  ];
+  const datasets = [], allLabels = [];
+  specs.forEach(sp => {
+    const t = D.tipos[sp.id];
+    if (!t || !t.dates.length) return;
+    let dates, values;
+    if (period === '3Y') {
+      const cut = new Date(); cut.setFullYear(cut.getFullYear()-3);
+      const pairs = t.dates.map((d,i)=>({d,v:t.values[i]})).filter(p=>new Date(p.d)>=cut);
+      dates = pairs.map(p=>p.d); values = pairs.map(p=>p.v);
+    } else {
+      const f = filterPeriod(t.dates, t.values, period);
+      dates = f.dates; values = f.values;
+    }
+    if (!dates.length) return;
+    if (!allLabels.length) allLabels.push(...dates.map(fmtDateLabel));
+    datasets.push(lineDs(sp.name, values, sp.color));
+  });
+  if (!datasets.length) return;
+  const legendOpts = { display:true, position:'top', align:'start', labels:{color:'#1a2a3a',font:{size:10,family:'IBM Plex Sans, sans-serif'},boxWidth:20,boxHeight:1.5,padding:10,usePointStyle:false} };
+  makeChart('periferico-chart','line', allLabels, datasets, {
+    plugins:{ ...CHART_BASE.plugins, legend:legendOpts,
+      tooltip:{ ...CHART_BASE.plugins.tooltip, callbacks:{ label:ctx=>' '+ctx.dataset.label+': '+ctx.parsed.y.toFixed(2)+'%' } } },
+    scales:{ ...CHART_BASE.scales, y:{ ...CHART_BASE.scales.y, ticks:{ ...CHART_BASE.scales.y.ticks, callback:v=>v.toFixed(2)+'%' } } },
+  });
+}
+
 function setRfPeriod(p, btn) {
   rfPeriod = p;
   document.querySelectorAll('#rf-content .pbtn').forEach(b=>{ if(['3M','6M','1A','3A'].includes(b.textContent.trim())) b.classList.remove('active'); });
   btn.classList.add('active');
   renderYield10y(p);
+  renderPerifericos(p);
 }
 function setCurveCountry(c, btn) {
   curveCountry = c;
@@ -1626,7 +1675,7 @@ const COUNTRY_COLORS = { US:'#1a2a3a', DE:'#94a3b8', JP:'#c8a882', UK:'#6b7fa0' 
 function renderYield10y(period) {
   const tenorId = '10y';
   const datasets = [];
-  ['US','DE','JP','UK'].forEach(c => {
+  ['US','DE','JP','UK','ES','FR','IT'].forEach(c => {
     const id = c.toLowerCase() + '10y';
     const t = D.tipos[id];
     if (!t) return;
@@ -1648,7 +1697,7 @@ function renderYield10y(period) {
         d.setDate(d.getDate()+1);
       }
     }
-    const cFlags2 = {US:'🇺🇸',DE:'🇩🇪',JP:'🇯🇵',UK:'🇬🇧'};
+    const cFlags2 = {US:'🇺🇸',DE:'🇩🇪',JP:'🇯🇵',UK:'🇬🇧',ES:'🇪🇸',FR:'🇫🇷',IT:'🇮🇹'};
     datasets.push({ ...lineDs(`${cFlags2[c]} ${c} 10Y`, values, COUNTRY_COLORS[c]), labels:dates });
   });
   if (!datasets.length) return;
