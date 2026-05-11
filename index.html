@@ -715,7 +715,7 @@ canvas { display:block; }
 // ============================================================
 // DATA STORE
 // ============================================================
-const D = {
+const D = window.D = {
   bolsa: {},      // id → { name, ticker, dates[], closes[], per? }
   valuation: {},  // id → { name, dates[], pers[] }
   tipos: {},      // ticker → { name, country, tenor, dates[], values[] }
