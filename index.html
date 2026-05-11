@@ -3580,23 +3580,7 @@ async function exportToPPT() {
   }
 }
 
-// ---- INJECT BUTTON ----
-document.addEventListener('DOMContentLoaded', () => {
-  // Wait a moment for the header to render
-  setTimeout(() => {
-    const headerStatus = document.querySelector('.header-status');
-    if (!headerStatus) return;
-
-    const btn = document.createElement('button');
-    btn.id = 'ppt-export-btn';
-    btn.className = 'upload-btn';
-    btn.innerHTML = '📑 Exportar PPT';
-    btn.style.cssText = 'background:rgba(0,133,202,0.12);border-color:rgba(0,133,202,0.4);color:#60a5fa;';
-    btn.onclick = exportToPPT;
-
-    headerStatus.insertBefore(btn, headerStatus.querySelector('.upload-btn'));
-  }, 200);
-});
+// ---- INJECT BUTTON ---- (button already in HTML, nothing to inject)
 
 </script>
 </body>
