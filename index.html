@@ -2147,12 +2147,20 @@ function renderCorrelaciones() {
       <div class="chart-wrap" style="height:280px"><canvas id="scatter-chart"></canvas></div>
     </div>`;
 
-  if (selCorrPair !== null) renderScatter(selCorrPair);
+  // Show scatter for selected pair after HTML is rendered
+  setTimeout(() => {
+    if (selCorrPair !== null) renderScatter(selCorrPair);
+    else if (CORR_PAIRS.length) { selCorrPair = 0; renderScatter(0); }
+  }, 50);
 }
 
 function selectCorrPair(i) {
   selCorrPair = i;
-  renderCorrelaciones();
+  // Update card selection visually without rebuilding HTML
+  document.querySelectorAll('.corr-card').forEach((c, idx) => {
+    c.classList.toggle('selected', idx === i);
+  });
+  renderScatter(i);
 }
 
 function renderScatter(i) {
