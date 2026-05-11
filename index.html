@@ -3525,9 +3525,21 @@ function addSlideResumen(pres, data) {
 let pres_ref = null;
 
 async function exportToPPT() {
+  // Wait up to 5s for data to load
   if (!window.D || !window.D.loaded) {
-    alert('Los datos están cargando. Espera un momento y vuelve a intentarlo.');
-    return;
+    const btn = document.getElementById('ppt-export-btn');
+    if (btn) { btn.textContent = '⏳ Cargando...'; btn.disabled = true; }
+    let tries = 0;
+    while ((!window.D || !window.D.loaded) && tries < 50) {
+      await new Promise(r => setTimeout(r, 100));
+      tries++;
+    }
+    if (!window.D || !window.D.loaded) {
+      if (btn) { btn.textContent = '📑 Exportar PPT'; btn.disabled = false; }
+      alert('No hay datos cargados. Carga el Excel primero.');
+      return;
+    }
+    if (btn) { btn.textContent = '📑 Exportar PPT'; btn.disabled = false; }
   }
 
   // Show progress
