@@ -2863,7 +2863,47 @@ async function processFile(file) {
 // ============================================================
 // INIT
 // ============================================================
+// ── AUTO-LOAD desde GitHub ─────────────────────────────────────
+const EXCEL_GITHUB_URL = 'https://raw.githubusercontent.com/1508900/market-dashboard/main/Datos_Claude.xlsx';
+
+async function autoLoad() {
+  const statusText = document.getElementById('status-text');
+  const dot = document.getElementById('status-dot');
+  if (statusText) statusText.textContent = 'Cargando datos...';
+
+  try {
+    const res = await fetch(EXCEL_GITHUB_URL + '?t=' + Date.now(), { cache:'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const buffer = await res.arrayBuffer();
+    const file = new File([buffer], 'Datos_Claude.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+    await loadExcel(file);
+
+    dot.classList.add('active');
+    const now = new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
+    statusText.textContent = 'Actualizado ' + now;
+    document.getElementById('upload-btn').classList.add('loaded');
+    document.getElementById('upload-btn').innerHTML = '✓ Datos cargados';
+
+    closeUpload();
+    renderAll();
+
+  } catch(err) {
+    console.warn('Auto-load falló:', err.message);
+    if (statusText) statusText.textContent = 'Sin datos';
+    // Fallback: mostrar modal de carga manual
+    openUpload();
+    const st = document.getElementById('upload-status');
+    if (st) {
+      st.style.color = 'var(--text3)';
+      st.textContent = 'No se pudo cargar automáticamente. Sube el Excel manualmente.';
+    }
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  // File input (carga manual como fallback)
   document.getElementById('file-input').addEventListener('change', async e => {
     const file = e.target.files[0]; if (!file) return;
     await processFile(file);
@@ -2875,9 +2915,10 @@ document.addEventListener('DOMContentLoaded', () => {
     e.preventDefault(); dz.classList.remove('over');
     const file = e.dataTransfer.files[0]; if(file) await processFile(file);
   });
+
   renderFG();
   renderEscenarios();
-  openUpload();
+  autoLoad();  // intenta cargar automáticamente desde GitHub
 });
 </script>
 <script>
