@@ -891,13 +891,11 @@ function parseSheet(sheet, mapObj) {
     if (typeof cell === 'string' && mapObj[cell.trim()]) colMap[col] = cell.trim();
   });
 
-  // Determine value offset: use explicit offset from mapObj, else always col+1
+  // Determine value offset: use explicit offset from mapObj, otherwise always col+1
   const valueOffsets = {};
   Object.keys(colMap).forEach(colStr => {
     const col = +colStr;
-    const ticker = colMap[col];
-    const meta = mapObj[ticker];
-    // Use explicit offset if defined in map, otherwise always col+1
+    const meta = mapObj[colMap[col]];
     valueOffsets[col] = (meta && meta.offset) ? meta.offset : 1;
   });
 
@@ -1891,7 +1889,7 @@ function renderCredito() {
   var hasComp = cdxIg && itrxIg;
   var hasRatioChart = cdxIg && cdxHy && itrxIg && itrxXover;
 
-  el.innerHTML = '<div class="spread-cards">'+cardsHTML+'</div>'+ratioCards+'<div class="three-col">'+chartPanels+'</div>'+
+  el.innerHTML = '<div class="spread-cards">'+cardsHTML+'</div>'+ratioCards+'<div class="four-col">'+chartPanels+'</div>'+
     (hasComp ? '<div class="two-col" style="margin-top:16px"><div class="chart-panel"><div class="cp-title">EEUU vs Europa — IG (pb)</div><div class="chart-wrap" style="height:160px"><canvas id="cr-comp"></canvas></div></div>'+(hasRatioChart?'<div class="chart-panel"><div class="cp-title">Ratio HY/IG — EEUU y Europa</div><div class="chart-wrap" style="height:160px"><canvas id="cr-ratio"></canvas></div></div>':'')+'</div>' : '');
 
   setTimeout(function(){ renderCreditoCharts(); }, 50);
@@ -2094,7 +2092,7 @@ function setMmPeriod(p, btn) {
 const CORR_PAIRS = [
   { a:'spx',   b:'gold',   la:'S&P 500',    lb:'Oro',     desc:'Bolsa vs activo refugio' },
   { a:'spx',   b:'dxy',    la:'S&P 500',    lb:'DXY',     desc:'Bolsa vs dólar' },
-  { a:'sx5e',  b:'brent',  la:'EuroStoxx',  lb:'Brent',   desc:'Bolsa europea vs petróleo' },
+  { a:'sx5e',  b:'brent',  la:'EuroStoxx',  lb:'Brent',   desc:'Bolsa europea vs petróleo (sign. depende del ciclo)' },
   { a:'brent', b:'gold',   la:'Brent',      lb:'Oro',     desc:'Petróleo vs Oro' },
   { a:'brent', b:'dxy',    la:'Brent',      lb:'DXY',     desc:'Petróleo vs dólar' },
   { a:'gold',  b:'dxy',    la:'Oro',        lb:'DXY',     desc:'Oro vs dólar (inversa típica)' },
