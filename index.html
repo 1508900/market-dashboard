@@ -2859,6 +2859,12 @@ async function processFile(file) {
     };
     reader2.readAsArrayBuffer(file);
 
+    // Guardar en caché para próximas veces
+    try {
+      const r = new FileReader();
+      r.onload = async e => { await saveToCache(e.target.result, file.name); };
+      r.readAsArrayBuffer(file);
+    } catch(e) {}
     setTimeout(() => { closeUpload(); renderAll(); }, 600);
   } catch(err) {
     st.style.color = 'var(--red)';
@@ -2872,46 +2878,101 @@ async function processFile(file) {
 // ============================================================
 // ── AUTO-LOAD desde GitHub ─────────────────────────────────────
 // Google Drive direct download with bypass for large file warning
-async function getExcelUrl() {
-  const fileId = '1UEGOchUUfIfOOwAE0irYS8kGg8NpBMaq';
-  // Use export URL that works for large files
-  return `https://drive.usercontent.google.com/download?id=${fileId}&export=download&authuser=0&confirm=t`;
+// ── CACHÉ LOCAL (IndexedDB) ────────────────────────────────────
+const DB_NAME = 'MarketMonitor', DB_STORE = 'excel', DB_KEY = 'datos';
+const DRIVE_FILE_ID = '1UEGOchUUfIfOOwAE0irYS8kGg8NpBMaq';
+
+function openDB() {
+  return new Promise((res, rej) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore(DB_STORE);
+    req.onsuccess = e => res(e.target.result);
+    req.onerror   = e => rej(e.target.error);
+  });
 }
-const EXCEL_GITHUB_URL = 'https://drive.usercontent.google.com/download?id=1UEGOchUUfIfOOwAE0irYS8kGg8NpBMaq&export=download&authuser=0&confirm=t';
+async function saveToCache(arrayBuffer, filename) {
+  const db = await openDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction(DB_STORE, 'readwrite');
+    tx.objectStore(DB_STORE).put({ buffer: arrayBuffer, name: filename, date: new Date().toISOString() }, DB_KEY);
+    tx.oncomplete = () => res();
+    tx.onerror    = e => rej(e.target.error);
+  });
+}
+async function loadFromCache() {
+  const db = await openDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction(DB_STORE, 'readonly');
+    const req = tx.objectStore(DB_STORE).get(DB_KEY);
+    req.onsuccess = e => res(e.target.result || null);
+    req.onerror   = e => rej(e.target.error);
+  });
+}
+
+async function fetchFromDrive() {
+  const urls = [
+    `https://drive.usercontent.google.com/download?id=${DRIVE_FILE_ID}&export=download&confirm=t`,
+    `https://drive.google.com/uc?id=${DRIVE_FILE_ID}&export=download&confirm=t`,
+  ];
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, { cache:'no-store' });
+      if (res.ok) {
+        const buf = await res.arrayBuffer();
+        if (buf.byteLength > 10000) return buf;
+      }
+    } catch(e) { continue; }
+  }
+  return null;
+}
+
+async function applyBuffer(buf, filename, label) {
+  const file = new File([buf], filename || 'Datos_Claude.xlsx', {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  });
+  await loadExcel(file);
+  const dot = document.getElementById('status-dot');
+  const statusText = document.getElementById('status-text');
+  dot.classList.add('active');
+  statusText.textContent = label;
+  document.getElementById('upload-btn').classList.add('loaded');
+  document.getElementById('upload-btn').innerHTML = '↺ Actualizar';
+  closeUpload();
+  renderAll();
+}
 
 async function autoLoad() {
   const statusText = document.getElementById('status-text');
-  const dot = document.getElementById('status-dot');
   if (statusText) statusText.textContent = 'Cargando datos...';
 
+  // 1. Intentar desde Google Drive (funciona para todos los usuarios)
   try {
-    const res = await fetch(EXCEL_GITHUB_URL + '?t=' + Date.now(), { cache:'no-store' });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const buffer = await res.arrayBuffer();
-    const file = new File([buffer], 'Datos_Claude.xlsx', {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    });
-    await loadExcel(file);
-
-    dot.classList.add('active');
-    const now = new Date().toLocaleTimeString('es-ES', {hour:'2-digit', minute:'2-digit'});
-    statusText.textContent = 'Actualizado ' + now;
-    document.getElementById('upload-btn').classList.add('loaded');
-    document.getElementById('upload-btn').innerHTML = '✓ Datos cargados';
-
-    closeUpload();
-    renderAll();
-
-  } catch(err) {
-    console.warn('Auto-load falló:', err.message);
-    if (statusText) statusText.textContent = 'Sin datos';
-    // Fallback: mostrar modal de carga manual
-    openUpload();
-    const st = document.getElementById('upload-status');
-    if (st) {
-      st.style.color = 'var(--text3)';
-      st.textContent = 'No se pudo cargar automáticamente. Sube el Excel manualmente.';
+    const buf = await fetchFromDrive();
+    if (buf) {
+      await applyBuffer(buf, 'Datos_Claude.xlsx', 'Datos actualizados');
+      await saveToCache(buf, 'Datos_Claude.xlsx');
+      return;
     }
+  } catch(e) { console.warn('Drive:', e.message); }
+
+  // 2. Usar caché local del navegador
+  try {
+    const cached = await loadFromCache();
+    if (cached && cached.buffer) {
+      const d = new Date(cached.date);
+      const label = 'Caché ' + d.toLocaleDateString('es-ES', {day:'2-digit', month:'2-digit'});
+      await applyBuffer(cached.buffer, cached.name, label);
+      return;
+    }
+  } catch(e) { console.warn('Cache:', e.message); }
+
+  // 3. Pedir carga manual
+  if (statusText) statusText.textContent = 'Sin datos';
+  openUpload();
+  const st = document.getElementById('upload-status');
+  if (st) {
+    st.style.color = 'var(--text3)';
+    st.textContent = 'Carga el Excel una vez — se recordará en este navegador.';
   }
 }
 
