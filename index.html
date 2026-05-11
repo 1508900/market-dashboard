@@ -3568,17 +3568,17 @@ window.exportToPPT = async function exportToPPT() {
 
     // Build slides
     addPortada(pres, fecha);
-    addSlideResumen(pres, window.D);
+    addSlideResumen(pres, D);
     addSectionDivider(pres, '01', 'Renta Variable');
-    addSlideBolsa(pres, window.D.bolsa);
+    addSlideBolsa(pres, D.bolsa);
     addSectionDivider(pres, '02', 'Renta Fija');
-    addSlideRentaFija(pres, window.D.tipos);
+    addSlideRentaFija(pres, D.tipos);
     addSectionDivider(pres, '03', 'Crédito y Spreads');
-    addSlideCredito(pres, window.D.spreads);
+    addSlideCredito(pres, D.spreads);
     addSectionDivider(pres, '04', 'Materias Primas');
-    addSlideMMPP(pres, window.D.mmpp);
+    addSlideMMPP(pres, D.mmpp);
     addSectionDivider(pres, '05', 'Volatilidad');
-    addSlideVolatilidad(pres, window.D.bolsa, window.D.spreads);
+    addSlideVolatilidad(pres, D.bolsa, D.spreads);
 
     // Download
     const dateStr = new Date().toISOString().slice(0,10);
