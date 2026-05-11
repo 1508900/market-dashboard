@@ -2864,7 +2864,13 @@ async function processFile(file) {
 // INIT
 // ============================================================
 // ── AUTO-LOAD desde GitHub ─────────────────────────────────────
-const EXCEL_GITHUB_URL = 'https://drive.google.com/uc?export=download&id=1UEGOchUUfIfOOwAE0irYS8kGg8NpBMaq';
+// Google Drive direct download with bypass for large file warning
+async function getExcelUrl() {
+  const fileId = '1UEGOchUUfIfOOwAE0irYS8kGg8NpBMaq';
+  // Use export URL that works for large files
+  return `https://drive.usercontent.google.com/download?id=${fileId}&export=download&authuser=0&confirm=t`;
+}
+const EXCEL_GITHUB_URL = 'https://drive.usercontent.google.com/download?id=1UEGOchUUfIfOOwAE0irYS8kGg8NpBMaq&export=download&authuser=0&confirm=t';
 
 async function autoLoad() {
   const statusText = document.getElementById('status-text');
