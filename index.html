@@ -496,6 +496,9 @@ canvas { display:block; }
   <div class="header-status">
     <span class="status-dot" id="status-dot"></span>
     <span id="status-text" style="font-size:10px">Sin datos</span>
+    <button class="upload-btn" id="ppt-export-btn" onclick="exportToPPT()" style="background:rgba(0,133,202,0.12);border-color:rgba(0,133,202,0.4);color:#0085CA">
+      📑 Exportar PPT
+    </button>
     <button class="upload-btn" id="upload-btn" onclick="openUpload()">
       ⬆ Cargar Excel
     </button>
@@ -3523,7 +3526,7 @@ let pres_ref = null;
 
 async function exportToPPT() {
   if (!window.D || !window.D.loaded) {
-    alert('Carga primero el Excel con los datos de mercado.');
+    alert('Los datos están cargando. Espera un momento y vuelve a intentarlo.');
     return;
   }
 
