@@ -2993,529 +2993,429 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 <script>
-/* ============================================================
-   PPT-EXPORT.JS — Generador PPT con plantilla Afi
-   Identidad visual Afi:
-     Azul profundo: #062D3F
-     Azul claro:    #0085CA
-     Gris claro:    #C8DAE2
-     Fuente:        Amasis MT Pro (con fallback a Georgia)
-   ============================================================ */
+// ============================================================
+// PPT EXPORT — Plantilla Afi
+// ============================================================
 
-// ---- COLORES AFI ----
 const AFI = {
-  darkBlue:  '062D3F',
-  blue:      '0085CA',
-  lightGray: 'C8DAE2',
-  white:     'FFFFFF',
-  black:     '1A1A1A',
-  green:     '22863A',
-  red:       'C0392B',
-  gold:      'E67E22',
-  font:      'Amasis MT Pro',
-  fontFb:    'Georgia',
+  darkBlue: '062D3F',
+  blue:     '0085CA',
+  lightGray:'C8DAE2',
+  white:    'FFFFFF',
+  black:    '1A1A1A',
+  gold:     'C8993A',
+  green:    '1A7A3C',
+  red:      'C0392B',
 };
 
-function afiFont() { return AFI.font; }
+const AFI_LOGO_FULL = 'data:image/png;base64,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';
+const AFI_LOGO_ICON = 'data:image/png;base64,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';
 
-function posColor(val) {
-  if (val == null || isNaN(val)) return AFI.black;
-  return val >= 0 ? AFI.green : AFI.red;
+function afiFont() { return 'Calibri'; }
+
+function fmtV(v) {
+  if (v == null) return '—';
+  if (Math.abs(v) >= 1000) return v.toLocaleString('es-ES', {minimumFractionDigits:0, maximumFractionDigits:1});
+  return v.toFixed(2);
+}
+function fmtP(v) { if (v == null) return '—'; return (v >= 0 ? '+' : '') + v.toFixed(2) + '%'; }
+function posColor(v) { return v == null ? AFI.black : v >= 0 ? AFI.green : AFI.red; }
+
+// ---- FOOTER ----
+function addFooter(slide, pres, pageNum) {
+  // Logo icon bottom left
+  slide.addImage({ data:AFI_LOGO_ICON, x:0.35, y:6.85, w:0.4, h:0.35 });
+  // Page number bottom right
+  if (pageNum) {
+    slide.addText(String(pageNum), {
+      x:9.0, y:6.92, w:0.6, h:0.25,
+      fontSize:9, color:AFI.lightGray, fontFace:afiFont(), align:'right', margin:0
+    });
+  }
+  // Footer text
+  slide.addText('Documento confidencial · Afi', {
+    x:1.0, y:6.95, w:7.5, h:0.2,
+    fontSize:7, color:AFI.lightGray, fontFace:afiFont(), align:'center', margin:0
+  });
 }
 
-function fmtV(val, dec) {
-  if (val == null || isNaN(val)) return '—';
-  dec = dec ?? (Math.abs(val) >= 1000 ? 0 : Math.abs(val) >= 10 ? 2 : 4);
-  return val.toLocaleString('es-ES', { minimumFractionDigits:dec, maximumFractionDigits:dec });
-}
-function fmtP(val) {
-  if (val == null || isNaN(val)) return '—';
-  return (val >= 0 ? '+' : '') + val.toFixed(2) + '%';
-}
-
-// ---- SLIDE BUILDERS ----
-
+// ---- PORTADA ----
 function addPortada(pres, fecha) {
   const slide = pres.addSlide();
-
-  // Fondo azul lado izquierdo
+  // Left blue panel
   slide.addShape(pres.ShapeType.rect, {
-    x:0, y:0, w:6.5, h:5.625,
-    fill:{ color: AFI.darkBlue },
-    line:{ color: AFI.darkBlue }
+    x:0, y:0, w:6.5, h:7.5,
+    fill:{color:AFI.darkBlue}, line:{color:AFI.darkBlue}
   });
-
-  // Franja azul claro decorativa
-  slide.addShape(pres.ShapeType.rect, {
-    x:0, y:4.8, w:6.5, h:0.1,
-    fill:{ color: AFI.blue },
-    line:{ color: AFI.blue }
+  // Title
+  slide.addText('Market Monitor', {
+    x:0.5, y:1.2, w:5.5, h:1.8,
+    fontSize:44, bold:false, color:AFI.white, fontFace:afiFont(), margin:0
   });
-
-  // Título grande
-  slide.addText('Monitor\nde Mercados', {
-    x:0.5, y:0.8, w:5.5, h:2.4,
-    fontSize:44, bold:true, color:AFI.white,
-    fontFace:afiFont(), valign:'top', margin:0
-  });
-
-  // Subtítulo
-  slide.addText('Resumen ejecutivo de mercados financieros globales', {
-    x:0.5, y:3.2, w:5.5, h:0.5,
-    fontSize:14, color:AFI.lightGray,
-    fontFace:afiFont(), italic:true, margin:0
-  });
-
-  // Fecha
+  // Date
   slide.addText(fecha, {
-    x:0.5, y:3.9, w:5.5, h:0.35,
-    fontSize:12, bold:true, color:AFI.blue,
-    fontFace:afiFont(), margin:0
+    x:0.5, y:3.1, w:5.5, h:0.35,
+    fontSize:13, bold:true, color:AFI.blue, fontFace:afiFont(), margin:0
   });
-
-  // Confidencial
-  slide.addText('Documento confidencial · Afi', {
-    x:0.5, y:5.1, w:5.5, h:0.3,
-    fontSize:10, color:'6B8FA0', fontFace:afiFont(), margin:0
+  // Subtitle
+  slide.addText('Resumen semanal de mercados financieros', {
+    x:0.5, y:3.55, w:5.5, h:0.3,
+    fontSize:11, color:AFI.lightGray, fontFace:afiFont(), margin:0
   });
-
-  // Panel derecho gris claro
+  // Confidential
+  slide.addText('Documento confidencial. Prohibida su reproducción y/o distribución sin autorización de Afi', {
+    x:0.5, y:6.5, w:5.5, h:0.4,
+    fontSize:8, color:AFI.lightGray, fontFace:afiFont(), margin:0
+  });
+  // Logo full bottom left
+  slide.addImage({ data:AFI_LOGO_FULL, x:0.4, y:6.85, w:1.2, h:0.5 });
+  // Right side gray
   slide.addShape(pres.ShapeType.rect, {
-    x:6.5, y:0, w:3.5, h:5.625,
-    fill:{ color: 'E8EFF3' },
-    line:{ color: 'E8EFF3' }
+    x:6.5, y:0, w:3.5, h:7.5,
+    fill:{color:'E8EEF2'}, line:{color:'E8EEF2'}
   });
-
-  // Logo texto Afi lado derecho
-  slide.addText('Afi', {
-    x:7.2, y:4.9, w:2, h:0.5,
-    fontSize:22, bold:true, color:AFI.darkBlue,
-    fontFace:afiFont(), margin:0
+  // Vertical blue accent
+  slide.addShape(pres.ShapeType.rect, {
+    x:6.5, y:0, w:0.08, h:7.5,
+    fill:{color:AFI.blue}, line:{color:AFI.blue}
   });
 }
 
+// ---- SECTION DIVIDER ----
 function addSectionDivider(pres, num, title) {
   const slide = pres.addSlide();
-
-  // Fondo completo azul profundo
   slide.addShape(pres.ShapeType.rect, {
-    x:0, y:0, w:10, h:5.625,
-    fill:{ color: AFI.darkBlue },
-    line:{ color: AFI.darkBlue }
+    x:0, y:0, w:6.5, h:7.5,
+    fill:{color:AFI.darkBlue}, line:{color:AFI.darkBlue}
   });
-
-  // Número grande
   slide.addText(num + '.', {
-    x:0.6, y:1.8, w:2, h:1.5,
-    fontSize:72, bold:true, color:AFI.blue,
-    fontFace:afiFont(), margin:0
+    x:0.5, y:2.0, w:1.2, h:1.0,
+    fontSize:56, bold:true, color:AFI.blue, fontFace:afiFont(), margin:0
   });
-
-  // Título sección
   slide.addText(title, {
-    x:0.6, y:3.2, w:8.5, h:1.2,
-    fontSize:32, bold:false, color:AFI.white,
-    fontFace:afiFont(), margin:0
+    x:0.5, y:3.0, w:5.5, h:1.5,
+    fontSize:36, bold:false, color:AFI.white, fontFace:afiFont(), margin:0
   });
-
-  // Línea azul decorativa
   slide.addShape(pres.ShapeType.rect, {
-    x:0.6, y:3.0, w:1.2, h:0.04,
-    fill:{ color: AFI.blue }, line:{ color: AFI.blue }
+    x:6.5, y:0, w:3.5, h:7.5,
+    fill:{color:'1A3A4A'}, line:{color:'1A3A4A'}
   });
-
-  addFooter(slide, pres);
-}
-
-function addFooter(slide, pres) {
-  // Línea separadora
   slide.addShape(pres.ShapeType.rect, {
-    x:0.4, y:5.35, w:9.2, h:0.03,
-    fill:{ color: AFI.lightGray }, line:{ color: AFI.lightGray }
-  });
-  slide.addText('Afi', {
-    x:0.4, y:5.38, w:1, h:0.2,
-    fontSize:9, bold:true, color:AFI.blue,
-    fontFace:afiFont(), margin:0
-  });
-  slide.addText('Monitor de Mercados · ' + new Date().toLocaleDateString('es-ES'), {
-    x:1.5, y:5.38, w:8, h:0.2,
-    fontSize:9, color:'8AA5B5', fontFace:afiFont(), margin:0, align:'right'
+    x:6.5, y:0, w:0.08, h:7.5,
+    fill:{color:AFI.blue}, line:{color:AFI.blue}
   });
 }
 
-function addSlideTitle(slide, title) {
+// ---- CONTENT SLIDE HEADER ----
+function addSlideHeader(slide, title) {
   slide.addText(title, {
     x:0.4, y:0.25, w:9.2, h:0.55,
-    fontSize:22, bold:true, color:AFI.darkBlue,
-    fontFace:afiFont(), margin:0
+    fontSize:20, bold:false, color:AFI.darkBlue, fontFace:afiFont(), margin:0
   });
-  slide.addShape(pres_ref.ShapeType.rect, {
-    x:0.4, y:0.82, w:9.2, h:0.03,
-    fill:{ color: AFI.lightGray }, line:{ color: AFI.lightGray }
+  // Blue bottom border under title
+  slide.addShape(pres.ShapeType.rect, {
+    x:0.4, y:0.82, w:9.2, h:0.04,
+    fill:{color:AFI.blue}, line:{color:AFI.blue}
   });
 }
 
-// ---- SLIDE: BOLSA ----
-function addSlideBolsa(pres, data) {
+// ---- CLAVES DE LA SEMANA ----
+function addSlideClaves(pres) {
   const slide = pres.addSlide();
-
-  slide.addText('Renta Variable', {
-    x:0.4, y:0.2, w:9.2, h:0.55,
-    fontSize:22, bold:true, color:AFI.darkBlue, fontFace:afiFont(), margin:0
+  slide.addText('Claves de la semana', {
+    x:0.4, y:0.25, w:9.2, h:0.55,
+    fontSize:20, bold:false, color:AFI.darkBlue, fontFace:afiFont(), margin:0
   });
   slide.addShape(pres.ShapeType.rect, {
-    x:0.4, y:0.78, w:9.2, h:0.03,
-    fill:{ color: AFI.lightGray }, line:{ color: AFI.lightGray }
+    x:0.4, y:0.82, w:9.2, h:0.04,
+    fill:{color:AFI.blue}, line:{color:AFI.blue}
   });
 
-  const indices = Object.values(data).filter(x=>!x.isFx&&!x.isVol&&x.price).slice(0,8);
-  if (!indices.length) {
-    slide.addText('Sin datos de renta variable disponibles', {
-      x:0.4, y:2, w:9.2, h:0.5, fontSize:14, color:'8AA5B5', fontFace:afiFont()
+  for (let i = 0; i < 5; i++) {
+    const y = 1.1 + i * 1.05;
+    // Number circle
+    slide.addShape(pres.ShapeType.ellipse, {
+      x:0.4, y:y+0.08, w:0.38, h:0.38,
+      fill:{color:AFI.blue}, line:{color:AFI.blue}
     });
-    addFooter(slide, pres); return;
+    slide.addText(String(i+1), {
+      x:0.4, y:y+0.08, w:0.38, h:0.38,
+      fontSize:12, bold:true, color:AFI.white, fontFace:afiFont(),
+      align:'center', valign:'middle', margin:0
+    });
+    // Empty text area
+    slide.addShape(pres.ShapeType.rect, {
+      x:0.95, y:y, w:8.6, h:0.55,
+      fill:{color:'F5F8FA'}, line:{color:AFI.lightGray, pt:0.5}
+    });
+    slide.addText('', {
+      x:1.1, y:y+0.05, w:8.3, h:0.45,
+      fontSize:11, color:AFI.black, fontFace:afiFont(), margin:0
+    });
   }
 
-  // Header row
-  const hY = 0.95, cols = [0.4, 2.8, 4.6, 6.0, 7.4, 8.6];
-  const headers = ['Índice', 'Último', '1 Semana', '1 Mes', 'YTD', 'PER Fw'];
-  headers.forEach((h, i) => {
-    slide.addText(h, {
-      x:cols[i], y:hY, w: i===0?2.2:1.2, h:0.28,
-      fontSize:9, bold:true, color:'6B8FA0', fontFace:afiFont(),
-      align: i===0?'left':'right', margin:0
-    });
-  });
+  addFooter(slide, pres);
+}
 
-  // Divider
+// ---- RESUMEN ----
+function addSlideResumen(pres, data) {
+  const slide = pres.addSlide();
+  slide.addText('Resumen ejecutivo', {
+    x:0.4, y:0.25, w:9.2, h:0.55,
+    fontSize:20, bold:false, color:AFI.darkBlue, fontFace:afiFont(), margin:0
+  });
   slide.addShape(pres.ShapeType.rect, {
-    x:0.4, y:1.25, w:9.2, h:0.02,
-    fill:{ color: AFI.lightGray }, line:{ color: AFI.lightGray }
+    x:0.4, y:0.82, w:9.2, h:0.04,
+    fill:{color:AFI.blue}, line:{color:AFI.blue}
   });
 
-  // Rows
-  indices.forEach((idx, i) => {
-    const y = 1.32 + i * 0.46;
-    const bg = i % 2 === 0;
-    if (bg) {
-      slide.addShape(pres.ShapeType.rect, {
-        x:0.4, y, w:9.2, h:0.44,
-        fill:{ color: 'F0F5F8' }, line:{ color: 'F0F5F8' }
-      });
-    }
+  const stats = [];
+  const spx = data.bolsa?.spx; if (spx) stats.push({ label:'S&P 500', val:fmtV(spx.price), sub:'YTD: '+fmtP(spx.ytd), c:posColor(spx.ytd) });
+  const sx5e= data.bolsa?.sx5e; if (sx5e) stats.push({ label:'Euro Stoxx 50', val:fmtV(sx5e.price), sub:'YTD: '+fmtP(sx5e.ytd), c:posColor(sx5e.ytd) });
+  const us10y=data.tipos?.us10y; if (us10y) stats.push({ label:'US 10Y', val:us10y.last.toFixed(2)+'%', sub:'Bono EEUU', c:AFI.darkBlue });
+  const de10y=data.tipos?.de10y; if (de10y) stats.push({ label:'DE 10Y', val:de10y.last.toFixed(2)+'%', sub:'Bund Alemania', c:AFI.darkBlue });
+  const gold=data.mmpp?.gold; if (gold) stats.push({ label:'Oro', val:fmtV(gold.price)+' $', sub:'YTD: '+fmtP(gold.ytd), c:posColor(gold.ytd) });
+  const vix=data.bolsa?.vix; if (vix) stats.push({ label:'VIX', val:vix.price.toFixed(1), sub:'Volatilidad EEUU', c:vix.price>25?AFI.red:vix.price>18?AFI.gold:AFI.green });
 
-    const perf1w = periodPerf(idx.dates, idx.closes, '1W');
-    const perf1m = periodPerf(idx.dates, idx.closes, '1M');
-
-    slide.addText(idx.name, { x:0.45, y:y+0.08, w:2.2, h:0.28, fontSize:11, bold:true, color:AFI.darkBlue, fontFace:afiFont(), margin:0 });
-    slide.addText(fmtV(idx.price), { x:cols[1], y:y+0.08, w:1.2, h:0.28, fontSize:11, color:AFI.black, fontFace:afiFont(), align:'right', margin:0 });
-    slide.addText(fmtP(perf1w), { x:cols[2], y:y+0.08, w:1.2, h:0.28, fontSize:11, color:posColor(perf1w), fontFace:afiFont(), align:'right', bold:true, margin:0 });
-    slide.addText(fmtP(perf1m), { x:cols[3], y:y+0.08, w:1.2, h:0.28, fontSize:11, color:posColor(perf1m), fontFace:afiFont(), align:'right', bold:true, margin:0 });
-    slide.addText(fmtP(idx.ytd), { x:cols[4], y:y+0.08, w:1.0, h:0.28, fontSize:11, color:posColor(idx.ytd), fontFace:afiFont(), align:'right', bold:true, margin:0 });
-    slide.addText(idx.per ? idx.per.toFixed(1)+'x' : '—', { x:cols[5], y:y+0.08, w:1.0, h:0.28, fontSize:11, color:AFI.black, fontFace:afiFont(), align:'right', margin:0 });
+  stats.slice(0,6).forEach((s, i) => {
+    const col = i % 3, row = Math.floor(i / 3);
+    const x = 0.4 + col * 3.1, y = 1.1 + row * 2.6;
+    slide.addShape(pres.ShapeType.rect, {
+      x, y, w:2.85, h:2.2,
+      fill:{color:'F5F8FA'}, line:{color:AFI.lightGray, pt:0.5}
+    });
+    // Blue top bar
+    slide.addShape(pres.ShapeType.rect, {
+      x, y, w:2.85, h:0.06,
+      fill:{color:AFI.blue}, line:{color:AFI.blue}
+    });
+    slide.addText(s.label, { x:x+0.15, y:y+0.15, w:2.55, h:0.28, fontSize:10, bold:true, color:AFI.darkBlue, fontFace:afiFont(), margin:0 });
+    slide.addText(s.val,   { x:x+0.15, y:y+0.5,  w:2.55, h:0.9,  fontSize:32, bold:true, color:s.c, fontFace:afiFont(), margin:0 });
+    slide.addText(s.sub,   { x:x+0.15, y:y+1.6,  w:2.55, h:0.35, fontSize:10, color:'6B8FA0', fontFace:afiFont(), margin:0 });
   });
 
   addFooter(slide, pres);
 }
 
-// ---- SLIDE: RENTA FIJA ----
-function addSlideRentaFija(pres, tipos) {
+// ---- BOLSA ----
+function addSlideBolsa(pres, data) {
   const slide = pres.addSlide();
-
-  slide.addText('Renta Fija — Tipos de Interés', {
-    x:0.4, y:0.2, w:9.2, h:0.55, fontSize:22, bold:true, color:AFI.darkBlue, fontFace:afiFont(), margin:0
+  slide.addText('Renta Variable', {
+    x:0.4, y:0.25, w:9.2, h:0.55,
+    fontSize:20, color:AFI.darkBlue, fontFace:afiFont(), margin:0
   });
   slide.addShape(pres.ShapeType.rect, {
-    x:0.4, y:0.78, w:9.2, h:0.03, fill:{color:AFI.lightGray}, line:{color:AFI.lightGray}
+    x:0.4, y:0.82, w:9.2, h:0.04,
+    fill:{color:AFI.blue}, line:{color:AFI.blue}
+  });
+
+  const indices = Object.values(data).filter(x => !x.isFx && !x.isVol && x.price);
+  const cols = ['ÍNDICE','PRECIO','1S','1M','YTD','1A','PER'];
+  const colW = [2.5, 1.3, 0.9, 0.9, 0.9, 0.9, 0.9];
+  const colX = [0.4];
+  colW.forEach((w,i) => { if(i>0) colX.push(colX[i-1]+colW[i-1]); });
+
+  // Header row
+  cols.forEach((c,i) => {
+    slide.addShape(pres.ShapeType.rect, { x:colX[i], y:1.0, w:colW[i]-0.02, h:0.32, fill:{color:AFI.darkBlue}, line:{color:AFI.darkBlue} });
+    slide.addText(c, { x:colX[i]+0.05, y:1.0, w:colW[i]-0.1, h:0.32, fontSize:8, bold:true, color:AFI.white, fontFace:afiFont(), align:i<1?'left':'right', valign:'middle', margin:0 });
+  });
+
+  indices.slice(0,10).forEach((idx, row) => {
+    const y = 1.32 + row * 0.48;
+    const bg = row % 2 === 0 ? 'F5F8FA' : 'FFFFFF';
+    colW.forEach((w,i) => {
+      slide.addShape(pres.ShapeType.rect, { x:colX[i], y, w:w-0.02, h:0.46, fill:{color:bg}, line:{color:'E0E8ED', pt:0.3} });
+    });
+    const perfs = [idx.perf1w, idx.perf1m, idx.ytd, idx.perf1y];
+    slide.addText(idx.name,            { x:colX[0]+0.1, y:y+0.08, w:colW[0]-0.15, h:0.3, fontSize:9, color:AFI.darkBlue, fontFace:afiFont(), margin:0 });
+    slide.addText(fmtV(idx.price),     { x:colX[1]+0.05, y:y+0.08, w:colW[1]-0.1, h:0.3, fontSize:9, bold:true, color:AFI.darkBlue, fontFace:afiFont(), align:'right', margin:0 });
+    perfs.forEach((p, pi) => {
+      slide.addText(fmtP(p), { x:colX[2+pi]+0.05, y:y+0.08, w:colW[2+pi]-0.1, h:0.3, fontSize:9, color:posColor(p), fontFace:afiFont(), align:'right', margin:0 });
+    });
+    const per = idx.per;
+    slide.addText(per ? per.toFixed(1)+'x' : '—', { x:colX[6]+0.05, y:y+0.08, w:colW[6]-0.1, h:0.3, fontSize:9, color:AFI.darkBlue, fontFace:afiFont(), align:'right', margin:0 });
+  });
+
+  addFooter(slide, pres);
+}
+
+// ---- RENTA FIJA ----
+function addSlideRentaFija(pres, tipos) {
+  const slide = pres.addSlide();
+  slide.addText('Renta Fija — Tipos de interés', {
+    x:0.4, y:0.25, w:9.2, h:0.55,
+    fontSize:20, color:AFI.darkBlue, fontFace:afiFont(), margin:0
+  });
+  slide.addShape(pres.ShapeType.rect, {
+    x:0.4, y:0.82, w:9.2, h:0.04,
+    fill:{color:AFI.blue}, line:{color:AFI.blue}
   });
 
   const countries = [
-    { code:'US', flag:'EEUU',     ids:['us2y','us5y','us10y','us30y'] },
-    { code:'DE', flag:'Alemania', ids:['de2y','de5y','de10y','de30y'] },
-    { code:'JP', flag:'Japón',    ids:['jp2y',null,'jp10y','jp30y']   },
-    { code:'UK', flag:'R. Unido', ids:['uk2y',null,'uk10y','uk30y']   },
+    { code:'us', name:'EEUU',     keys:{y2:'us2y', y5:'us5y', y10:'us10y', y30:'us30y'} },
+    { code:'de', name:'Alemania', keys:{y2:'de2y', y5:'de5y', y10:'de10y', y30:'de30y'} },
+    { code:'jp', name:'Japón',    keys:{y2:'jp2y',              y10:'jp10y', y30:'jp30y'} },
+    { code:'uk', name:'R.Unido',  keys:{y2:'uk2y',              y10:'uk10y', y30:'uk30y'} },
   ];
 
-  const tenors = ['2Y','5Y','10Y','30Y','2-10'];
-  const hY = 0.92;
-  const cx = [0.4, 2.3, 3.5, 4.7, 5.9, 7.3];
+  const cols = ['PAÍS','2Y','5Y','10Y','30Y','PEND 2-10','PEND 2-30'];
+  const colW = [1.8, 1.1, 1.1, 1.1, 1.1, 1.2, 1.2];
+  const colX = [0.4];
+  colW.forEach((w,i) => { if(i>0) colX.push(colX[i-1]+colW[i-1]); });
 
-  slide.addText('País', { x:cx[0], y:hY, w:1.7, h:0.25, fontSize:9, bold:true, color:'6B8FA0', fontFace:afiFont(), margin:0 });
-  ['2Y','5Y','10Y','30Y','Pend. 2-10'].forEach((h,i) => {
-    slide.addText(h, { x:cx[i+1], y:hY, w:1.2, h:0.25, fontSize:9, bold:true, color:'6B8FA0', fontFace:afiFont(), align:'right', margin:0 });
+  cols.forEach((c,i) => {
+    slide.addShape(pres.ShapeType.rect, { x:colX[i], y:1.0, w:colW[i]-0.02, h:0.32, fill:{color:AFI.darkBlue}, line:{color:AFI.darkBlue} });
+    slide.addText(c, { x:colX[i]+0.05, y:1.0, w:colW[i]-0.1, h:0.32, fontSize:8, bold:true, color:AFI.white, fontFace:afiFont(), align:i<1?'left':'center', valign:'middle', margin:0 });
   });
 
-  slide.addShape(pres.ShapeType.rect, {
-    x:0.4, y:1.2, w:9.2, h:0.02, fill:{color:AFI.lightGray}, line:{color:AFI.lightGray}
-  });
-
-  countries.forEach((c, i) => {
-    const y = 1.27 + i * 0.52;
-    if (i%2===0) slide.addShape(pres.ShapeType.rect, { x:0.4, y, w:9.2, h:0.5, fill:{color:'F0F5F8'}, line:{color:'F0F5F8'} });
-
-    const vals = c.ids.map(id => id ? tipos[id]?.last : null);
-    const slope = vals[0]!=null&&vals[2]!=null ? +(vals[2]-vals[0]).toFixed(2) : null;
-
-    slide.addText(c.flag, { x:cx[0]+0.05, y:y+0.1, w:1.7, h:0.3, fontSize:12, bold:true, color:AFI.darkBlue, fontFace:afiFont(), margin:0 });
-    vals.forEach((v,j) => {
-      slide.addText(v!=null?v.toFixed(2)+'%':'—', { x:cx[j+1], y:y+0.1, w:1.2, h:0.3, fontSize:12, color:AFI.black, fontFace:afiFont(), align:'right', margin:0 });
+  countries.forEach((c, row) => {
+    const y = 1.32 + row * 0.55;
+    const bg = row % 2 === 0 ? 'F5F8FA' : 'FFFFFF';
+    colW.forEach((w,i) => {
+      slide.addShape(pres.ShapeType.rect, { x:colX[i], y, w:w-0.02, h:0.52, fill:{color:bg}, line:{color:'E0E8ED', pt:0.3} });
     });
-    if (slope!=null) {
-      slide.addText((slope>0?'+':'')+slope+'%', { x:cx[5], y:y+0.1, w:1.2, h:0.3, fontSize:12, bold:true, color:posColor(slope), fontFace:afiFont(), align:'right', margin:0 });
-    }
+    slide.addText(c.name, { x:colX[0]+0.1, y:y+0.1, w:colW[0]-0.15, h:0.32, fontSize:10, bold:true, color:AFI.darkBlue, fontFace:afiFont(), margin:0 });
+    [['y2',1],['y5',2],['y10',3],['y30',4]].forEach(([k,ci]) => {
+      const t = tipos[c.keys[k]];
+      const val = t ? t.last.toFixed(2)+'%' : '—';
+      slide.addText(val, { x:colX[ci]+0.05, y:y+0.1, w:colW[ci]-0.1, h:0.32, fontSize:10, color:AFI.darkBlue, fontFace:afiFont(), align:'center', margin:0 });
+    });
+    // Pendientes - from D.pendientes
+    const p210 = D.pendientes[c.code+'_2_10'];
+    const p230 = D.pendientes[c.code+'_2_30'];
+    const s210 = p210 ? (p210.last>=0?'+':'')+Math.round(p210.last)+'pb' : '—';
+    const s230 = p230 ? (p230.last>=0?'+':'')+Math.round(p230.last)+'pb' : '—';
+    slide.addText(s210, { x:colX[5]+0.05, y:y+0.1, w:colW[5]-0.1, h:0.32, fontSize:10, color:p210&&p210.last>0?AFI.green:p210&&p210.last<0?AFI.red:AFI.darkBlue, fontFace:afiFont(), align:'center', margin:0 });
+    slide.addText(s230, { x:colX[6]+0.05, y:y+0.1, w:colW[6]-0.1, h:0.32, fontSize:10, color:p230&&p230.last>0?AFI.green:p230&&p230.last<0?AFI.red:AFI.darkBlue, fontFace:afiFont(), align:'center', margin:0 });
   });
 
-  // Nota
-  slide.addText('Tipos nominales a cierre de sesión. Fuente: Bloomberg.', {
-    x:0.4, y:3.9, w:9.2, h:0.25, fontSize:8, color:'8AA5B5', italic:true, fontFace:afiFont(), margin:0
+  // Tipos referencia
+  slide.addText('TIPOS DE REFERENCIA', { x:0.4, y:3.7, w:9.2, h:0.25, fontSize:8, bold:true, color:AFI.blue, fontFace:afiFont(), charSpacing:2, margin:0 });
+  const refs = [
+    { id:'euribor3m', name:'Euribor 3M' }, { id:'euribor12m', name:'Euribor 12M' },
+    { id:'bce_depo', name:'Depo BCE' }, { id:'fed_funds', name:'Fed Funds' },
+  ];
+  refs.forEach((r, i) => {
+    const x = 0.4 + i * 2.35, y = 3.98;
+    slide.addShape(pres.ShapeType.rect, { x, y, w:2.2, h:1.2, fill:{color:'F5F8FA'}, line:{color:AFI.lightGray, pt:0.5} });
+    slide.addShape(pres.ShapeType.rect, { x, y, w:2.2, h:0.05, fill:{color:AFI.blue}, line:{color:AFI.blue} });
+    const t = D.tiposRef[r.id];
+    slide.addText(r.name, { x:x+0.1, y:y+0.1, w:2.0, h:0.25, fontSize:9, color:'6B8FA0', fontFace:afiFont(), margin:0 });
+    slide.addText(t ? t.last.toFixed(2)+'%' : '—', { x:x+0.1, y:y+0.38, w:2.0, h:0.55, fontSize:24, bold:true, color:AFI.darkBlue, fontFace:afiFont(), margin:0 });
   });
 
   addFooter(slide, pres);
 }
 
-// ---- SLIDE: CRÉDITO ----
+// ---- CRÉDITO ----
 function addSlideCredito(pres, spreads) {
   const slide = pres.addSlide();
-
-  slide.addText('Crédito — Spreads de Crédito', {
-    x:0.4, y:0.2, w:9.2, h:0.55, fontSize:22, bold:true, color:AFI.darkBlue, fontFace:afiFont(), margin:0
+  slide.addText('Crédito — Spreads', {
+    x:0.4, y:0.25, w:9.2, h:0.55,
+    fontSize:20, color:AFI.darkBlue, fontFace:afiFont(), margin:0
   });
   slide.addShape(pres.ShapeType.rect, {
-    x:0.4, y:0.78, w:9.2, h:0.03, fill:{color:AFI.lightGray}, line:{color:AFI.lightGray}
+    x:0.4, y:0.82, w:9.2, h:0.04,
+    fill:{color:AFI.blue}, line:{color:AFI.blue}
   });
 
-  const spreadList = Object.values(spreads);
-  if (!spreadList.length) {
-    slide.addText('Sin datos de spreads disponibles', { x:0.4, y:2, w:9.2, h:0.5, fontSize:14, color:'8AA5B5', fontFace:afiFont() });
-    addFooter(slide, pres); return;
-  }
-
-  // Spread cards — 2 columns
-  const cardW = 4.3, cardH = 1.1;
-  spreadList.slice(0,6).forEach((s, i) => {
+  const items = Object.values(spreads);
+  items.forEach((s, i) => {
     const col = i % 2, row = Math.floor(i / 2);
-    const x = 0.4 + col * (cardW + 0.4);
-    const y = 0.95 + row * (cardH + 0.15);
-    const prev = s.values?.length >= 2 ? s.values[s.values.length-2] : s.last;
-    const chg = prev ? +(s.last - prev).toFixed(1) : 0;
-
-    // Card background
-    slide.addShape(pres.ShapeType.rect, {
-      x, y, w:cardW, h:cardH,
-      fill:{color:'F0F5F8'}, line:{color:AFI.lightGray, pt:1}
-    });
-
-    // Left accent bar
-    slide.addShape(pres.ShapeType.rect, {
-      x, y, w:0.06, h:cardH,
-      fill:{color:AFI.blue}, line:{color:AFI.blue}
-    });
-
-    slide.addText(s.region, { x:x+0.15, y:y+0.1, w:cardW-0.2, h:0.2, fontSize:8, bold:true, color:'6B8FA0', fontFace:afiFont(), charSpacing:1, margin:0 });
-    slide.addText(s.name, { x:x+0.15, y:y+0.28, w:cardW-0.2, h:0.25, fontSize:11, color:AFI.darkBlue, fontFace:afiFont(), margin:0 });
-    slide.addText(s.last.toFixed(0) + ' pb', { x:x+0.15, y:y+0.52, w:2, h:0.4, fontSize:22, bold:true, color:AFI.darkBlue, fontFace:afiFont(), margin:0 });
-    slide.addText((chg>0?'+':'')+chg+' pb', { x:x+2.5, y:y+0.58, w:1.6, h:0.32, fontSize:14, bold:true, color:posColor(-chg), fontFace:afiFont(), align:'right', margin:0 });
+    const x = 0.4 + col * 4.8, y = 1.05 + row * 1.5;
+    slide.addShape(pres.ShapeType.rect, { x, y, w:4.5, h:1.25, fill:{color:'F5F8FA'}, line:{color:AFI.lightGray, pt:0.5} });
+    slide.addShape(pres.ShapeType.rect, { x, y, w:0.05, h:1.25, fill:{color:AFI.blue}, line:{color:AFI.blue} });
+    slide.addText(s.region, { x:x+0.2, y:y+0.08, w:2.5, h:0.22, fontSize:8, color:'6B8FA0', fontFace:afiFont(), margin:0 });
+    slide.addText(s.name, { x:x+0.2, y:y+0.28, w:3.5, h:0.28, fontSize:10, bold:true, color:AFI.darkBlue, fontFace:afiFont(), margin:0 });
+    slide.addText(s.last.toFixed(0)+' pb', { x:x+0.2, y:y+0.56, w:2.5, h:0.5, fontSize:26, bold:true, color:AFI.blue, fontFace:afiFont(), margin:0 });
   });
 
   addFooter(slide, pres);
 }
 
-// ---- SLIDE: MATERIAS PRIMAS ----
+// ---- MATERIAS PRIMAS ----
 function addSlideMMPP(pres, mmpp) {
   const slide = pres.addSlide();
-
   slide.addText('Materias Primas', {
-    x:0.4, y:0.2, w:9.2, h:0.55, fontSize:22, bold:true, color:AFI.darkBlue, fontFace:afiFont(), margin:0
+    x:0.4, y:0.25, w:9.2, h:0.55,
+    fontSize:20, color:AFI.darkBlue, fontFace:afiFont(), margin:0
   });
   slide.addShape(pres.ShapeType.rect, {
-    x:0.4, y:0.78, w:9.2, h:0.03, fill:{color:AFI.lightGray}, line:{color:AFI.lightGray}
+    x:0.4, y:0.82, w:9.2, h:0.04,
+    fill:{color:AFI.blue}, line:{color:AFI.blue}
   });
 
-  const mmList = Object.values(mmpp).filter(m=>m.price);
-  if (!mmList.length) {
-    slide.addText('Sin datos disponibles', { x:0.4, y:2, w:9.2, h:0.5, fontSize:14, color:'8AA5B5', fontFace:afiFont() });
-    addFooter(slide, pres); return;
-  }
-
-  const groups = {};
-  mmList.forEach(m => { if(!groups[m.group]) groups[m.group]=[]; groups[m.group].push(m); });
-
-  let startY = 0.92;
-  Object.entries(groups).forEach(([g, items]) => {
-    const gName = { energia:'ENERGÍA', metales:'METALES PRECIOSOS' }[g] || g.toUpperCase();
-
-    slide.addText(gName, {
-      x:0.4, y:startY, w:9.2, h:0.22,
-      fontSize:9, bold:true, color:AFI.blue, fontFace:afiFont(), charSpacing:2, margin:0
-    });
-    startY += 0.25;
-
-    const cols = [0.4, 2.5, 4.2, 5.6, 7.0, 8.4];
-    if (startY < 1.2) {
-      ['Activo', 'Precio', 'Unidad', '1 Sem.', '1 Mes', 'YTD'].forEach((h,i) => {
-        slide.addText(h, { x:cols[i], y:startY, w:1.8, h:0.22, fontSize:8, bold:true, color:'6B8FA0', fontFace:afiFont(), align:i>0?'right':'left', margin:0 });
-      });
-      startY += 0.22;
-    }
-
-    items.slice(0, 4).forEach((m, i) => {
-      const y = startY;
-      if (i%2===0) slide.addShape(pres.ShapeType.rect, { x:0.4, y, w:9.2, h:0.38, fill:{color:'F0F5F8'}, line:{color:'F0F5F8'} });
-
-      const p1w = periodPerf(m.dates, m.closes, '1W');
-      const p1m = periodPerf(m.dates, m.closes, '1M');
-
-      slide.addText(m.name, { x:cols[0]+0.05, y:y+0.05, w:2, h:0.28, fontSize:11, bold:true, color:AFI.darkBlue, fontFace:afiFont(), margin:0 });
-      slide.addText(fmtV(m.price), { x:cols[1], y:y+0.05, w:1.5, h:0.28, fontSize:11, color:AFI.black, fontFace:afiFont(), align:'right', margin:0 });
-      slide.addText(m.unit||'', { x:cols[2], y:y+0.05, w:1.2, h:0.28, fontSize:10, color:'6B8FA0', fontFace:afiFont(), align:'right', margin:0 });
-      slide.addText(fmtP(p1w), { x:cols[3], y:y+0.05, w:1.2, h:0.28, fontSize:11, bold:true, color:posColor(p1w), fontFace:afiFont(), align:'right', margin:0 });
-      slide.addText(fmtP(p1m), { x:cols[4], y:y+0.05, w:1.2, h:0.28, fontSize:11, bold:true, color:posColor(p1m), fontFace:afiFont(), align:'right', margin:0 });
-      slide.addText(fmtP(m.ytd), { x:cols[5], y:y+0.05, w:1.0, h:0.28, fontSize:11, bold:true, color:posColor(m.ytd), fontFace:afiFont(), align:'right', margin:0 });
-
-      startY += 0.38;
-    });
-
-    startY += 0.15;
+  const items = Object.values(mmpp);
+  items.forEach((m, i) => {
+    const col = i % 3, row = Math.floor(i / 3);
+    const x = 0.4 + col * 3.1, y = 1.05 + row * 2.1;
+    if (y > 6.2) return;
+    slide.addShape(pres.ShapeType.rect, { x, y, w:2.85, h:1.85, fill:{color:'F5F8FA'}, line:{color:AFI.lightGray, pt:0.5} });
+    slide.addShape(pres.ShapeType.rect, { x, y, w:2.85, h:0.05, fill:{color:AFI.blue}, line:{color:AFI.blue} });
+    slide.addText(m.name, { x:x+0.12, y:y+0.1, w:2.6, h:0.25, fontSize:9, bold:true, color:AFI.darkBlue, fontFace:afiFont(), margin:0 });
+    slide.addText(m.unit, { x:x+0.12, y:y+0.32, w:2.6, h:0.2, fontSize:8, color:'6B8FA0', fontFace:afiFont(), margin:0 });
+    slide.addText(fmtV(m.price), { x:x+0.12, y:y+0.55, w:2.6, h:0.7, fontSize:26, bold:true, color:AFI.darkBlue, fontFace:afiFont(), margin:0 });
+    const ytd = m.ytd;
+    slide.addText('YTD: '+fmtP(ytd), { x:x+0.12, y:y+1.38, w:2.6, h:0.3, fontSize:10, bold:true, color:posColor(ytd), fontFace:afiFont(), margin:0 });
   });
 
   addFooter(slide, pres);
 }
 
-// ---- SLIDE: VOLATILIDAD ----
-function addSlideVolatilidad(pres, bolsa, spreads) {
+// ---- VOLATILIDAD ----
+function addSlideVolatilidad(pres, bolsa) {
   const slide = pres.addSlide();
-
-  slide.addText('Volatilidad — VIX y VSTOXX', {
-    x:0.4, y:0.2, w:9.2, h:0.55, fontSize:22, bold:true, color:AFI.darkBlue, fontFace:afiFont(), margin:0
+  slide.addText('Volatilidad', {
+    x:0.4, y:0.25, w:9.2, h:0.55,
+    fontSize:20, color:AFI.darkBlue, fontFace:afiFont(), margin:0
   });
   slide.addShape(pres.ShapeType.rect, {
-    x:0.4, y:0.78, w:9.2, h:0.03, fill:{color:AFI.lightGray}, line:{color:AFI.lightGray}
+    x:0.4, y:0.82, w:9.2, h:0.04,
+    fill:{color:AFI.blue}, line:{color:AFI.blue}
   });
 
   const vols = [
-    { id:'vix',  name:'VIX',    market:'S&P 500 (EEUU)',    refs:{low:12,normal:20,elevated:30,extreme:40} },
+    { id:'vix',  name:'VIX',    market:'S&P 500 (EEUU)',     refs:{low:12,normal:20,elevated:30,extreme:40} },
     { id:'v2x',  name:'VSTOXX', market:'Euro Stoxx 50 (EU)', refs:{low:14,normal:22,elevated:32,extreme:45} },
   ];
 
   vols.forEach((vd, i) => {
     const v = bolsa[vd.id];
     if (!v) return;
-
-    const x = 0.4 + i * 4.7;
-    const y = 0.98;
-
-    // Card bg
-    slide.addShape(pres.ShapeType.rect, {
-      x, y, w:4.3, h:2.2, fill:{color:'F0F5F8'}, line:{color:AFI.lightGray, pt:1}
-    });
-
+    const x = 0.4 + i * 4.7, y = 1.05;
     const refs = vd.refs;
     const price = v.price;
     const zone = price < refs.low ? {l:'Complacencia',c:AFI.green} :
                  price < refs.normal ? {l:'Normal',c:AFI.blue} :
                  price < refs.elevated ? {l:'Elevada',c:AFI.gold} :
-                 {l:'Extrema',c:'C0392B'};
+                 {l:'Extrema',c:AFI.red};
 
+    slide.addShape(pres.ShapeType.rect, { x, y, w:4.3, h:3.8, fill:{color:'F5F8FA'}, line:{color:AFI.lightGray, pt:0.5} });
+    slide.addShape(pres.ShapeType.rect, { x, y, w:4.3, h:0.05, fill:{color:AFI.blue}, line:{color:AFI.blue} });
     // Zone badge
-    slide.addShape(pres.ShapeType.rect, {
-      x:x+2.6, y:y+0.15, w:1.5, h:0.28,
-      fill:{color:zone.c+'22'}, line:{color:zone.c, pt:1}
-    });
-    slide.addText(zone.l, { x:x+2.6, y:y+0.15, w:1.5, h:0.28, fontSize:9, bold:true, color:zone.c, fontFace:afiFont(), align:'center', valign:'middle', margin:0 });
-
-    slide.addText(vd.name, { x:x+0.2, y:y+0.12, w:2.2, h:0.3, fontSize:14, bold:true, color:AFI.darkBlue, fontFace:afiFont(), margin:0 });
-    slide.addText(vd.market, { x:x+0.2, y:y+0.42, w:2.5, h:0.22, fontSize:9, color:'6B8FA0', fontFace:afiFont(), margin:0 });
-    slide.addText(price.toFixed(2), { x:x+0.2, y:y+0.65, w:2.5, h:0.6, fontSize:36, bold:true, color:zone.c, fontFace:afiFont(), margin:0 });
-
-    // YTD
-    slide.addText('YTD: ' + fmtP(v.ytd), { x:x+0.2, y:y+1.3, w:2, h:0.28, fontSize:11, bold:true, color:posColor(v.ytd), fontFace:afiFont(), margin:0 });
+    slide.addShape(pres.ShapeType.rect, { x:x+2.5, y:y+0.18, w:1.6, h:0.3, fill:{color:zone.c+'22'}, line:{color:zone.c, pt:0.8} });
+    slide.addText(zone.l, { x:x+2.5, y:y+0.18, w:1.6, h:0.3, fontSize:9, bold:true, color:zone.c, fontFace:afiFont(), align:'center', valign:'middle', margin:0 });
+    slide.addText(vd.name, { x:x+0.2, y:y+0.15, w:2.0, h:0.32, fontSize:14, bold:true, color:AFI.darkBlue, fontFace:afiFont(), margin:0 });
+    slide.addText(vd.market, { x:x+0.2, y:y+0.5, w:2.5, h:0.24, fontSize:9, color:'6B8FA0', fontFace:afiFont(), margin:0 });
+    slide.addText(price.toFixed(2), { x:x+0.2, y:y+0.78, w:2.5, h:0.85, fontSize:52, bold:true, color:zone.c, fontFace:afiFont(), margin:0 });
+    slide.addText('YTD: '+fmtP(v.ytd), { x:x+0.2, y:y+1.72, w:2.5, h:0.3, fontSize:11, bold:true, color:posColor(v.ytd), fontFace:afiFont(), margin:0 });
 
     // Reference bar
     const max = refs.extreme * 1.3;
-    const bY = y+1.7, bX = x+0.2, bW = 3.9;
-    slide.addShape(pres.ShapeType.rect, { x:bX, y:bY, w:bW*(refs.low/max), h:0.1, fill:{color:'22863A44'}, line:{color:'22863A44'} });
-    slide.addShape(pres.ShapeType.rect, { x:bX+bW*(refs.low/max), y:bY, w:bW*((refs.normal-refs.low)/max), h:0.1, fill:{color:AFI.blue+'44'}, line:{color:AFI.blue+'44'} });
-    slide.addShape(pres.ShapeType.rect, { x:bX+bW*(refs.normal/max), y:bY, w:bW*((refs.elevated-refs.normal)/max), h:0.1, fill:{color:AFI.gold+'44'}, line:{color:AFI.gold+'44'} });
-    slide.addShape(pres.ShapeType.rect, { x:bX+bW*(refs.elevated/max), y:bY, w:bW*0.3, h:0.1, fill:{color:'C0392B44'}, line:{color:'C0392B44'} });
-    // Needle
+    const bY = y+2.2, bX = x+0.2, bW = 3.9;
+    slide.addShape(pres.ShapeType.rect, { x:bX, y:bY, w:bW*(refs.low/max), h:0.15, fill:{color:AFI.green+'44'}, line:{color:AFI.green+'44'} });
+    slide.addShape(pres.ShapeType.rect, { x:bX+bW*(refs.low/max), y:bY, w:bW*((refs.normal-refs.low)/max), h:0.15, fill:{color:AFI.blue+'44'}, line:{color:AFI.blue+'44'} });
+    slide.addShape(pres.ShapeType.rect, { x:bX+bW*(refs.normal/max), y:bY, w:bW*((refs.elevated-refs.normal)/max), h:0.15, fill:{color:AFI.gold+'44'}, line:{color:AFI.gold+'44'} });
+    slide.addShape(pres.ShapeType.rect, { x:bX+bW*(refs.elevated/max), y:bY, w:bW*0.3, h:0.15, fill:{color:AFI.red+'44'}, line:{color:AFI.red+'44'} });
     const needleX = bX + Math.min(0.98, price/max) * bW;
-    slide.addShape(pres.ShapeType.rect, { x:needleX, y:bY-0.04, w:0.04, h:0.18, fill:{color:zone.c}, line:{color:zone.c} });
-  });
+    slide.addShape(pres.ShapeType.rect, { x:needleX-0.02, y:bY-0.06, w:0.04, h:0.27, fill:{color:zone.c}, line:{color:zone.c} });
 
-  // Spreads resumen abajo
-  const cdxIg = spreads['cdx_ig'], cdxHy = spreads['cdx_hy'];
-  const itrxIg = spreads['itrx_ig'], itrxXover = spreads['itrx_xover'];
-
-  if (cdxIg || cdxHy || itrxIg || itrxXover) {
-    slide.addText('SPREADS DE CRÉDITO CLAVE', {
-      x:0.4, y:3.3, w:9.2, h:0.22, fontSize:9, bold:true, color:AFI.blue, fontFace:afiFont(), charSpacing:2, margin:0
-    });
-
-    const spItems = [cdxIg, cdxHy, itrxIg, itrxXover].filter(Boolean);
-    spItems.forEach((s,i) => {
-      const x = 0.4 + i * 2.35;
-      slide.addText(s.name.split(' ').slice(0,2).join(' '), { x, y:3.55, w:2.2, h:0.22, fontSize:9, color:'6B8FA0', fontFace:afiFont(), margin:0 });
-      slide.addText(s.last.toFixed(0)+' pb', { x, y:3.75, w:2.2, h:0.35, fontSize:16, bold:true, color:AFI.darkBlue, fontFace:afiFont(), margin:0 });
-    });
-  }
-
-  addFooter(slide, pres);
-}
-
-// ---- SLIDE: RESUMEN EJECUTIVO ----
-function addSlideResumen(pres, data) {
-  const slide = pres.addSlide();
-
-  slide.addText('Resumen Ejecutivo de Mercados', {
-    x:0.4, y:0.2, w:9.2, h:0.55, fontSize:22, bold:true, color:AFI.darkBlue, fontFace:afiFont(), margin:0
-  });
-  slide.addShape(pres.ShapeType.rect, {
-    x:0.4, y:0.78, w:9.2, h:0.03, fill:{color:AFI.lightGray}, line:{color:AFI.lightGray}
-  });
-
-  // 6 big stat boxes
-  const stats = [];
-
-  // SPX
-  const spx = data.bolsa?.spx;
-  if (spx) stats.push({ label:'S&P 500', val:fmtV(spx.price), sub:'YTD: '+fmtP(spx.ytd), subColor:posColor(spx.ytd) });
-
-  // SX5E
-  const sx5e = data.bolsa?.sx5e;
-  if (sx5e) stats.push({ label:'Euro Stoxx 50', val:fmtV(sx5e.price), sub:'YTD: '+fmtP(sx5e.ytd), subColor:posColor(sx5e.ytd) });
-
-  // US 10Y
-  const us10y = data.tipos?.us10y;
-  if (us10y) stats.push({ label:'US 10Y', val:us10y.last.toFixed(2)+'%', sub:'Bono EEUU', subColor:AFI.black });
-
-  // Brent
-  const brent = data.mmpp?.brent;
-  if (brent) stats.push({ label:'Brent', val:fmtV(brent.price)+' $', sub:'YTD: '+fmtP(brent.ytd), subColor:posColor(brent.ytd) });
-
-  // Oro
-  const gold = data.mmpp?.gold;
-  if (gold) stats.push({ label:'Oro', val:fmtV(gold.price)+' $', sub:'YTD: '+fmtP(gold.ytd), subColor:posColor(gold.ytd) });
-
-  // VIX
-  const vix = data.bolsa?.vix;
-  if (vix) stats.push({ label:'VIX', val:vix.price.toFixed(2), sub:vix.price<20?'Normal':vix.price<30?'Elevado':'Extremo', subColor:vix.price<20?AFI.green:vix.price<30?AFI.gold:'C0392B' });
-
-  stats.slice(0,6).forEach((s, i) => {
-    const col = i % 3, row = Math.floor(i / 3);
-    const x = 0.4 + col * 3.1;
-    const y = 0.95 + row * 1.85;
-
-    slide.addShape(pres.ShapeType.rect, {
-      x, y, w:2.9, h:1.65, fill:{color:'F0F5F8'}, line:{color:AFI.lightGray, pt:1}
-    });
-    slide.addShape(pres.ShapeType.rect, {
-      x, y, w:2.9, h:0.06, fill:{color:AFI.blue}, line:{color:AFI.blue}
-    });
-
-    slide.addText(s.label, { x:x+0.15, y:y+0.15, w:2.6, h:0.25, fontSize:10, bold:true, color:'6B8FA0', fontFace:afiFont(), margin:0 });
-    slide.addText(s.val, { x:x+0.15, y:y+0.4, w:2.6, h:0.65, fontSize:26, bold:true, color:AFI.darkBlue, fontFace:afiFont(), margin:0 });
-    slide.addText(s.sub, { x:x+0.15, y:y+1.1, w:2.6, h:0.35, fontSize:12, bold:true, color:s.subColor, fontFace:afiFont(), margin:0 });
+    // Labels
+    slide.addText('Bajo', { x:bX, y:bY+0.18, w:bW*(refs.low/max), h:0.2, fontSize:7, color:AFI.green, fontFace:afiFont(), align:'center', margin:0 });
+    slide.addText('Normal', { x:bX+bW*(refs.low/max), y:bY+0.18, w:bW*((refs.normal-refs.low)/max), h:0.2, fontSize:7, color:AFI.blue, fontFace:afiFont(), align:'center', margin:0 });
+    slide.addText('Elevado', { x:bX+bW*(refs.normal/max), y:bY+0.18, w:bW*((refs.elevated-refs.normal)/max), h:0.2, fontSize:7, color:AFI.gold, fontFace:afiFont(), align:'center', margin:0 });
+    slide.addText('Extremo', { x:bX+bW*(refs.elevated/max), y:bY+0.18, w:bW*0.3, h:0.2, fontSize:7, color:AFI.red, fontFace:afiFont(), align:'center', margin:0 });
   });
 
   addFooter(slide, pres);
@@ -3525,7 +3425,6 @@ function addSlideResumen(pres, data) {
 let pres_ref = null;
 
 window.exportToPPT = async function exportToPPT() {
-  // Wait up to 5s for data to load
   if (!D || !D.loaded) {
     const btn = document.getElementById('ppt-export-btn');
     if (btn) { btn.textContent = '⏳ Cargando...'; btn.disabled = true; }
@@ -3542,55 +3441,40 @@ window.exportToPPT = async function exportToPPT() {
     if (btn) { btn.textContent = '📑 Exportar PPT'; btn.disabled = false; }
   }
 
-  // Show progress
   const btn = document.getElementById('ppt-export-btn');
   if (btn) { btn.textContent = '⏳ Generando...'; btn.disabled = true; }
 
   try {
-    // Load PptxGenJS dynamically
-    if (typeof PptxGenJS === 'undefined') {
-      await new Promise((res, rej) => {
-        const s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js';
-        s.onload = res; s.onerror = rej;
-        document.head.appendChild(s);
-      });
-    }
-
     const pres = new PptxGenJS();
     pres_ref = pres;
-    pres.layout = 'LAYOUT_16x9';
+    pres.layout = 'LAYOUT_WIDE';
     pres.author = 'Afi';
     pres.company = 'Afi';
-    pres.title = 'Monitor de Mercados';
 
-    const fecha = new Date().toLocaleDateString('es-ES', { day:'2-digit', month:'long', year:'numeric' });
+    const fecha = new Date().toLocaleDateString('es-ES', {day:'2-digit', month:'long', year:'numeric'});
 
-    // Build slides
     addPortada(pres, fecha);
+    addSlideClaves(pres);
     addSlideResumen(pres, D);
-    addSectionDivider(pres, '01', 'Renta Variable');
+    addSectionDivider(pres, '1', 'Renta Variable');
     addSlideBolsa(pres, D.bolsa);
-    addSectionDivider(pres, '02', 'Renta Fija');
+    addSectionDivider(pres, '2', 'Renta Fija');
     addSlideRentaFija(pres, D.tipos);
-    addSectionDivider(pres, '03', 'Crédito y Spreads');
+    addSectionDivider(pres, '3', 'Crédito');
     addSlideCredito(pres, D.spreads);
-    addSectionDivider(pres, '04', 'Materias Primas');
+    addSectionDivider(pres, '4', 'Materias Primas');
     addSlideMMPP(pres, D.mmpp);
-    addSectionDivider(pres, '05', 'Volatilidad');
-    addSlideVolatilidad(pres, D.bolsa, D.spreads);
+    addSectionDivider(pres, '5', 'Volatilidad');
+    addSlideVolatilidad(pres, D.bolsa);
 
-    // Download
-    const dateStr = new Date().toISOString().slice(0,10);
-    await pres.writeFile({ fileName: `Monitor_Mercados_${dateStr}.pptx` });
-
+    await pres.writeFile({ fileName: 'Market_Monitor_' + fecha.replace(/ /g,'_') + '.pptx' });
+    if (btn) { btn.textContent = '📑 Exportar PPT'; btn.disabled = false; }
   } catch(err) {
     console.error('PPT export error:', err);
     alert('Error al generar la PPT: ' + err.message);
-  } finally {
     if (btn) { btn.textContent = '📑 Exportar PPT'; btn.disabled = false; }
   }
-}
+};
 
 // ---- INJECT BUTTON ---- (button already in HTML, nothing to inject)
 
