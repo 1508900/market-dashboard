@@ -2852,19 +2852,13 @@ async function processFile(file) {
     document.getElementById('upload-btn').classList.add('loaded');
     document.getElementById('upload-btn').textContent = '✓ ' + file.name.split('.')[0];
 
-    // Guardar en caché local para próximas veces
-    const reader2 = new FileReader();
-    reader2.onload = async e => {
-      try { await saveToCache(e.target.result, file.name); } catch(err) { console.warn('Cache save error:', err); }
-    };
-    reader2.readAsArrayBuffer(file);
-
     // Guardar en caché para próximas veces
     try {
-      const r = new FileReader();
-      r.onload = async e => { await saveToCache(e.target.result, file.name); };
-      r.readAsArrayBuffer(file);
-    } catch(e) {}
+      const arrayBuf = await file.arrayBuffer();
+      await saveToCache(arrayBuf, file.name);
+      console.log('Caché guardada correctamente');
+    } catch(e) { console.warn('Cache save error:', e); }
+
     setTimeout(() => { closeUpload(); renderAll(); }, 600);
   } catch(err) {
     st.style.color = 'var(--red)';
